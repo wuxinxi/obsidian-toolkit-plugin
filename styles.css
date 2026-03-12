@@ -1,0 +1,5 @@
+/* Default state is hidden if the body has the class */
+body.hide-image-folder .nav-folder:has(> .nav-folder-title[data-path$="/image" i]),
+body.hide-image-folder .nav-folder:has(> .nav-folder-title[data-path="image" i]) {
+    display: none !important;
+}

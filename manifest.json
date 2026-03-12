@@ -1,0 +1,10 @@
+{
+	"id": "obsidian-tangren-plusin",
+	"name": "TangrenPlusin",
+	"version": "1.0.0",
+	"minAppVersion": "0.15.0",
+	"description": "A comprehensive toolkit for Obsidian, providing workflow enhancements like folder auto-open and visual cleaning.",
+	"author": "Tangren",
+	"authorUrl": "https://obsidian.md",
+	"isDesktopOnly": false
+}
