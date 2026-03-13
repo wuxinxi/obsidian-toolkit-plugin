@@ -55,12 +55,14 @@ var import_obsidian = __toModule(require("obsidian"));
 var DEFAULT_SETTINGS = {
   isHidden: true,
   autoOpenWolaiFolders: true,
-  showQuickCreateButton: true
+  showQuickCreateButton: true,
+  lockDragAndDrop: false
 };
 var ToolkitPlugin = class extends import_obsidian.Plugin {
   constructor() {
     super(...arguments);
     this.settings = DEFAULT_SETTINGS;
+    this.lockRibbonEl = null;
   }
   onload() {
     return __async(this, null, function* () {
@@ -68,6 +70,10 @@ var ToolkitPlugin = class extends import_obsidian.Plugin {
       this.addRibbonIcon("image-off", "Toggle Image Folders", (evt) => {
         this.toggleVisibility();
       });
+      this.lockRibbonEl = this.addRibbonIcon(this.settings.lockDragAndDrop ? "lock" : "unlock", "Toggle Drag-and-Drop Lock", (evt) => {
+        this.toggleDragLock();
+      });
+      this.refreshDragLock();
       this.addCommand({
         id: "toggle-image-folder-visibility",
         name: "Toggle Image Folder Visibility",
@@ -75,6 +81,22 @@ var ToolkitPlugin = class extends import_obsidian.Plugin {
           this.toggleVisibility();
         }
       });
+      this.addCommand({
+        id: "toggle-drag-lock",
+        name: "Toggle File Explorer Drag-and-Drop Lock",
+        callback: () => {
+          this.toggleDragLock();
+        }
+      });
+      this.registerDomEvent(document, "dragstart", (evt) => {
+        if (this.settings.lockDragAndDrop) {
+          const target = evt.target;
+          if (target.closest(".nav-file") || target.closest(".nav-folder")) {
+            evt.preventDefault();
+            new import_obsidian.Notice("File drag-and-drop is locked by ToolkitPlugin.");
+          }
+        }
+      }, true);
       this.addSettingTab(new ToolkitPluginSettingTab(this.app, this));
       this.refreshVisibility();
       this.registerDomEvent(document, "click", (evt) => {
@@ -177,6 +199,25 @@ var ToolkitPlugin = class extends import_obsidian.Plugin {
       }
     });
   }
+  toggleDragLock() {
+    return __async(this, null, function* () {
+      this.settings.lockDragAndDrop = !this.settings.lockDragAndDrop;
+      yield this.saveSettings();
+      this.refreshDragLock();
+      const status = this.settings.lockDragAndDrop ? "Locked" : "Unlocked";
+      new import_obsidian.Notice(`File drag-and-drop is now ${status}`);
+    });
+  }
+  refreshDragLock() {
+    if (this.lockRibbonEl) {
+      (0, import_obsidian.setIcon)(this.lockRibbonEl, this.settings.lockDragAndDrop ? "lock" : "unlock");
+    }
+    if (this.settings.lockDragAndDrop) {
+      document.body.classList.add("is-drag-locked");
+    } else {
+      document.body.classList.remove("is-drag-locked");
+    }
+  }
   toggleVisibility() {
     return __async(this, null, function* () {
       this.settings.isHidden = !this.settings.isHidden;
@@ -194,7 +235,7 @@ var ToolkitPlugin = class extends import_obsidian.Plugin {
     }
   }
   onunload() {
-    document.body.classList.remove("hide-image-folder");
+    document.body.classList.remove("hide-image-folder", "is-drag-locked");
     document.querySelectorAll(".toolkit-plus-icon").forEach((el) => el.remove());
     document.querySelectorAll(".has-toolkit-icon").forEach((el) => el.classList.remove("has-toolkit-icon"));
   }
@@ -235,6 +276,11 @@ var ToolkitPluginSettingTab = class extends import_obsidian.PluginSettingTab {
       } else {
         this.plugin.injectCreateButtons();
       }
+    })));
+    new import_obsidian.Setting(containerEl).setName("Lock File Explorer Drag-and-Drop").setDesc("Prevent accidental moving of files and folders in the file explorer.").addToggle((toggle) => toggle.setValue(this.plugin.settings.lockDragAndDrop).onChange((value) => __async(this, null, function* () {
+      this.plugin.settings.lockDragAndDrop = value;
+      yield this.plugin.saveSettings();
+      this.plugin.refreshDragLock();
     })));
   }
 };

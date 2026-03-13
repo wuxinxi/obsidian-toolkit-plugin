@@ -4,16 +4,19 @@ interface ToolkitPluginSettings {
 	isHidden: boolean;
 	autoOpenWolaiFolders: boolean;
 	showQuickCreateButton: boolean;
+	lockDragAndDrop: boolean;
 }
 
 const DEFAULT_SETTINGS: ToolkitPluginSettings = {
 	isHidden: true,
 	autoOpenWolaiFolders: true,
-	showQuickCreateButton: true
+	showQuickCreateButton: true,
+	lockDragAndDrop: false
 }
 
 export default class ToolkitPlugin extends Plugin {
 	settings: ToolkitPluginSettings = DEFAULT_SETTINGS;
+	private lockRibbonEl: HTMLElement | null = null;
 
 	async onload() {
 		await this.loadSettings();
@@ -23,7 +26,19 @@ export default class ToolkitPlugin extends Plugin {
 			this.toggleVisibility();
 		});
 
-		// Add Command Palette item
+		// Add Ribbon Icon for Toggling Drag-and-Drop Lock
+		this.lockRibbonEl = this.addRibbonIcon(
+			this.settings.lockDragAndDrop ? 'lock' : 'unlock',
+			'Toggle Drag-and-Drop Lock',
+			(evt: MouseEvent) => {
+				this.toggleDragLock();
+			}
+		);
+
+		// Apply initial drag lock state
+		this.refreshDragLock();
+
+		// Add Command Palette items
 		this.addCommand({
 			id: 'toggle-image-folder-visibility',
 			name: 'Toggle Image Folder Visibility',
@@ -31,6 +46,26 @@ export default class ToolkitPlugin extends Plugin {
 				this.toggleVisibility();
 			}
 		});
+
+		this.addCommand({
+			id: 'toggle-drag-lock',
+			name: 'Toggle File Explorer Drag-and-Drop Lock',
+			callback: () => {
+				this.toggleDragLock();
+			}
+		});
+
+		// Intercept dragstart events to prevent accidental moves
+		this.registerDomEvent(document, 'dragstart', (evt: DragEvent) => {
+			if (this.settings.lockDragAndDrop) {
+				const target = evt.target as HTMLElement;
+				// Check if the drag is coming from the file explorer
+				if (target.closest('.nav-file') || target.closest('.nav-folder')) {
+					evt.preventDefault();
+					new Notice('File drag-and-drop is locked by ToolkitPlugin.');
+				}
+			}
+		}, true);
 
 		// Add Settings Tab
 		this.addSettingTab(new ToolkitPluginSettingTab(this.app, this));
@@ -158,6 +193,29 @@ export default class ToolkitPlugin extends Plugin {
 		}
 	}
 
+	async toggleDragLock() {
+		this.settings.lockDragAndDrop = !this.settings.lockDragAndDrop;
+		await this.saveSettings();
+		this.refreshDragLock();
+		
+		const status = this.settings.lockDragAndDrop ? 'Locked' : 'Unlocked';
+		new Notice(`File drag-and-drop is now ${status}`);
+	}
+
+	refreshDragLock() {
+		// Update Ribbon Icon
+		if (this.lockRibbonEl) {
+			setIcon(this.lockRibbonEl, this.settings.lockDragAndDrop ? 'lock' : 'unlock');
+		}
+
+		// Update Body Class for CSS-based feedback if needed
+		if (this.settings.lockDragAndDrop) {
+			document.body.classList.add('is-drag-locked');
+		} else {
+			document.body.classList.remove('is-drag-locked');
+		}
+	}
+
 	async toggleVisibility() {
 		this.settings.isHidden = !this.settings.isHidden;
 		await this.saveSettings();
@@ -176,7 +234,7 @@ export default class ToolkitPlugin extends Plugin {
 	}
 
 	onunload() {
-		document.body.classList.remove('hide-image-folder');
+		document.body.classList.remove('hide-image-folder', 'is-drag-locked');
 		// Remove all injected buttons and classes
 		document.querySelectorAll('.toolkit-plus-icon').forEach(el => el.remove());
 		document.querySelectorAll('.has-toolkit-icon').forEach(el => el.classList.remove('has-toolkit-icon'));
@@ -240,6 +298,17 @@ class ToolkitPluginSettingTab extends PluginSettingTab {
 					} else {
 						this.plugin.injectCreateButtons();
 					}
+				}));
+
+		new Setting(containerEl)
+			.setName('Lock File Explorer Drag-and-Drop')
+			.setDesc('Prevent accidental moving of files and folders in the file explorer.')
+			.addToggle(toggle => toggle
+				.setValue(this.plugin.settings.lockDragAndDrop)
+				.onChange(async (value) => {
+					this.plugin.settings.lockDragAndDrop = value;
+					await this.plugin.saveSettings();
+					this.plugin.refreshDragLock();
 				}));
 	}
 }

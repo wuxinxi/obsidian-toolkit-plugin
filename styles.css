@@ -1,7 +1,15 @@
-/* Hide Image Folder */
 body.hide-image-folder .nav-folder:has(> .nav-folder-title[data-path$="/image" i]),
 body.hide-image-folder .nav-folder:has(> .nav-folder-title[data-path="image" i]) {
     display: none !important;
+}
+
+/* Drag-and-Drop Lock Prevention */
+body.is-drag-locked .nav-file,
+body.is-drag-locked .nav-folder,
+body.is-drag-locked .nav-file-title,
+body.is-drag-locked .nav-folder-title {
+    -webkit-user-drag: none !important;
+    user-drag: none !important;
 }
 
 /* Quick Create Button Styling - Refined */
