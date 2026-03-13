@@ -1,5 +1,51 @@
-/* Default state is hidden if the body has the class */
+/* Hide Image Folder */
 body.hide-image-folder .nav-folder:has(> .nav-folder-title[data-path$="/image" i]),
 body.hide-image-folder .nav-folder:has(> .nav-folder-title[data-path="image" i]) {
     display: none !important;
+}
+
+/* Quick Create Button Styling - Refined */
+.nav-folder-title {
+    position: relative !important;
+}
+
+.toolkit-plus-icon {
+    display: none !important;
+    position: absolute !important;
+    right: 4px !important;
+    top: 50% !important;
+    transform: translateY(-50%) !important;
+    
+    align-items: center;
+    justify-content: center;
+    width: 20px !important;
+    height: 20px !important;
+    border-radius: 4px;
+    opacity: 0.5;
+    cursor: pointer;
+    z-index: 20;
+    transition: opacity 0.2s, background-color 0.2s;
+    padding: 0 !important;
+    margin: 0 !important;
+}
+
+.toolkit-plus-icon:hover {
+    opacity: 1 !important;
+    background-color: var(--background-modifier-hover) !important;
+}
+
+.nav-folder-title:hover .toolkit-plus-icon {
+    display: flex !important;
+}
+
+/* Ensure the text doesn't overlap with the icon on hover */
+.nav-folder-title:hover {
+    padding-right: 30px !important;
+}
+
+.toolkit-plus-icon svg {
+    width: 14px !important;
+    height: 14px !important;
+    color: var(--text-muted);
+    display: block !important;
 }

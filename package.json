@@ -1,4 +1,5 @@
-	"name": "obsidian-toolkit",
+{
+	"name": "ToolkitPlugin",
 	"version": "1.0.0",
 	"description": "A comprehensive toolkit for Obsidian, providing workflow enhancements like folder auto-open and visual cleaning.",
 	"main": "main.js",

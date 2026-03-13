@@ -1,35 +1,61 @@
-# TangrenPlusin for Obsidian
+# ToolkitPlugin for Obsidian
 
-TangrenPlusin 是一款为 Obsidian 打造的综合功能增强插件，旨在通过一系列实用的微调和自动化功能来提升您的笔记工作流。
+ToolkitPlugin 是一款为 Obsidian 打造的综合功能增强插件，旨在通过一系列实用的微调和自动化功能来提升您的笔记工作流。
 
 目前它主要解决了从 **Wolai** 等块式笔记系统导入数据后的结构痛点，并提供了自由的视觉控制。
 
 ## 🚀 主要功能
 
-### 1. 文件夹自动打开 (Auto-open Wolai-style Folders)
+### 1. 文件夹快速新建 (Quick Create Button)
+在文件夹右侧添加一个 `+` 图标（悬停时显示），点击即可在文件夹内快速新建笔记。
+- **自动展开**：如果文件夹处于收起状态，点击 `+` 会自动将其展开。
+- **焦点定位**：新建笔记后，文件树会自动定位并高亮显示该笔记，方便立即开始编辑。
+- **智能拦截**：针对已展开的文件夹，点击 `+` 绝不会触发误收起。
+
+### 2. 文件夹自动打开 (Auto-open Wolai-style Folders)
 针对特定的文件夹结构（文件夹名与内部唯一的 `.md` 文件名一致），实现“点击/双击”文件夹直接打开正文的功能。
 - **自动识别**：智能匹配文件名与目录名。
-- **干扰排除**：自动忽略 `image` 文件夹（无论其是否显示），确保在 Wolai 风格结构下依然能一键触达内容。
+- **干扰排除**：自动忽略 `image` 文件夹，确保在 Wolai 风格结构下依然能一键触达内容。
 
-### 2. 视觉清理 (Visual Cleaning)
+### 3. 视觉清理 (Visual Cleaning)
 一键隐藏/显示文件列表中的特定资源目录。
-- **全局隐藏**：默认支持匹配所有层级的 `image` 文件夹。
-- **快接切换**：通过 Ribbon 图标、命令面板或快捷键即时切换。
+- **全局隐藏**：默认支持匹配所有层级的 `image` 文件夹（不分大小写）。
+- **快捷切换**：通过 Ribbon 图标、命令面板或快捷键即时切换。
 
 ### 3. 高度可配置
 所有功能都可以在插件设置页面进行独立开关，满足不同场景下的需求。
 
 ## 🛠️ 安装说明
 
-1. 在您的 Obsidian 库中创建目录：`.obsidian/plugins/obsidian-tangren-plusin/`。
+1. 在您的 Obsidian 库中创建目录：`.obsidian/plugins/obsidian-toolkit-plugin/`。
 2. 将以下文件放入该目录：
    - `main.js`
    - `manifest.json`
    - `styles.css`
-3. 在 Obsidian 设置中启用 **TangrenPlusin**。
+3. 在 Obsidian 设置中启用 **ToolkitPlugin**。
+
+## ⚒️ 开发与构建
+
+如果您想自行修改并构建插件，可以参考以下命令：
+
+1. **安装依赖**：
+   ```bash
+   npm install
+   ```
+
+2. **开发模式 (自动编译)**：
+   ```bash
+   npm run dev
+   ```
+
+3. **生产构建**：
+   ```bash
+   npm run build / node esbuild.config.mjs production
+   ```
+   构建完成后，新的 `main.js` 将出现在项目根目录下。
 
 ## 📈 未来规划
-TangrenPlusin 作为一个通用增强包，未来将持续集成更多提升效率的功能，包括但不限于：
+ToolkitPlugin 作为一个通用增强包，未来将持续集成更多提升效率的功能，包括但不限于：
 - 更多排版优化工具。
 - 增强型文件管理自动化。
 - 自定义样式注入。

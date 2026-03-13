@@ -49,14 +49,15 @@ var __async = (__this, __arguments, generator) => {
 
 // src/main.ts
 __export(exports, {
-  default: () => HideImagePlugin
+  default: () => ToolkitPlugin
 });
 var import_obsidian = __toModule(require("obsidian"));
 var DEFAULT_SETTINGS = {
   isHidden: true,
-  autoOpenWolaiFolders: true
+  autoOpenWolaiFolders: true,
+  showQuickCreateButton: true
 };
-var HideImagePlugin = class extends import_obsidian.Plugin {
+var ToolkitPlugin = class extends import_obsidian.Plugin {
   constructor() {
     super(...arguments);
     this.settings = DEFAULT_SETTINGS;
@@ -74,12 +75,14 @@ var HideImagePlugin = class extends import_obsidian.Plugin {
           this.toggleVisibility();
         }
       });
-      this.addSettingTab(new HideImageSettingTab(this.app, this));
+      this.addSettingTab(new ToolkitPluginSettingTab(this.app, this));
       this.refreshVisibility();
       this.registerDomEvent(document, "click", (evt) => {
         if (!this.settings.autoOpenWolaiFolders)
           return;
         const target = evt.target;
+        if (target.closest(".toolkit-plus-icon"))
+          return;
         if (target.classList.contains("nav-folder-collapse-indicator") || target.closest(".nav-folder-collapse-indicator")) {
           return;
         }
@@ -94,6 +97,67 @@ var HideImagePlugin = class extends import_obsidian.Plugin {
           }
         }
       });
+      this.registerInterval(window.setInterval(() => this.injectCreateButtons(), 1e3));
+    });
+  }
+  injectCreateButtons() {
+    if (!this.settings.showQuickCreateButton)
+      return;
+    const folderTitles = document.querySelectorAll(".nav-folder-title:not(.has-toolkit-icon)");
+    folderTitles.forEach((el) => {
+      const folderTitleEl = el;
+      folderTitleEl.addClass("has-toolkit-icon");
+      const iconContainer = folderTitleEl.createEl("div", { cls: "toolkit-plus-icon" });
+      (0, import_obsidian.setIcon)(iconContainer, "plus-with-circle");
+      iconContainer.setAttr("aria-label", "New note");
+      ["mousedown", "mouseup", "click", "pointerdown", "pointerup"].forEach((type) => {
+        iconContainer.addEventListener(type, (evt) => {
+          evt.stopPropagation();
+          evt.stopImmediatePropagation();
+          if (type === "mousedown" || type === "click")
+            evt.preventDefault();
+          if (type === "mousedown" && evt.button === 0) {
+            const path = folderTitleEl.getAttr("data-path");
+            if (path) {
+              const folder = this.app.vault.getAbstractFileByPath(path);
+              if (folder instanceof import_obsidian.TFolder) {
+                this.handleQuickCreate(folder, path);
+              }
+            }
+          }
+        }, true);
+      });
+    });
+  }
+  handleQuickCreate(folder, path) {
+    return __async(this, null, function* () {
+      const appAny = this.app;
+      try {
+        const explorerLeaves = this.app.workspace.getLeavesOfType("file-explorer");
+        explorerLeaves.forEach((leaf) => {
+          const view = leaf.view;
+          if (view.fileItems && view.fileItems[path]) {
+            view.fileItems[path].setCollapsed(false);
+          }
+        });
+        const fileManagerAny = this.app.fileManager;
+        let newFile;
+        if (typeof fileManagerAny.createNewMarkdownFile === "function") {
+          newFile = yield fileManagerAny.createNewMarkdownFile(folder);
+        } else {
+          newFile = yield this.app.vault.create(`${path}/Untitled.md`, "");
+        }
+        if (newFile) {
+          yield this.app.workspace.getLeaf(false).openFile(newFile);
+          explorerLeaves.forEach((leaf) => {
+            if (leaf.view.revealFile) {
+              leaf.view.revealFile(newFile);
+            }
+          });
+        }
+      } catch (e) {
+        console.error("toolkitPlusin: Quick create failed", e);
+      }
     });
   }
   handleFolderClick(folder) {
@@ -131,6 +195,8 @@ var HideImagePlugin = class extends import_obsidian.Plugin {
   }
   onunload() {
     document.body.classList.remove("hide-image-folder");
+    document.querySelectorAll(".toolkit-plus-icon").forEach((el) => el.remove());
+    document.querySelectorAll(".has-toolkit-icon").forEach((el) => el.classList.remove("has-toolkit-icon"));
   }
   loadSettings() {
     return __async(this, null, function* () {
@@ -143,7 +209,7 @@ var HideImagePlugin = class extends import_obsidian.Plugin {
     });
   }
 };
-var HideImageSettingTab = class extends import_obsidian.PluginSettingTab {
+var ToolkitPluginSettingTab = class extends import_obsidian.PluginSettingTab {
   constructor(app, plugin) {
     super(app, plugin);
     this.plugin = plugin;
@@ -151,7 +217,7 @@ var HideImageSettingTab = class extends import_obsidian.PluginSettingTab {
   display() {
     const { containerEl } = this;
     containerEl.empty();
-    containerEl.createEl("h2", { text: "Hide Image Folder Settings" });
+    containerEl.createEl("h2", { text: "ToolkitPlugin Settings" });
     new import_obsidian.Setting(containerEl).setName("Hide Image Folders").setDesc('Hide all folders named "image" in the file explorer.').addToggle((toggle) => toggle.setValue(this.plugin.settings.isHidden).onChange((value) => __async(this, null, function* () {
       this.plugin.settings.isHidden = value;
       yield this.plugin.saveSettings();
@@ -160,6 +226,15 @@ var HideImageSettingTab = class extends import_obsidian.PluginSettingTab {
     new import_obsidian.Setting(containerEl).setName("Auto-open Wolai-style Folders").setDesc("When clicking a folder containing only one MD file with the same name, open the file automatically.").addToggle((toggle) => toggle.setValue(this.plugin.settings.autoOpenWolaiFolders).onChange((value) => __async(this, null, function* () {
       this.plugin.settings.autoOpenWolaiFolders = value;
       yield this.plugin.saveSettings();
+    })));
+    new import_obsidian.Setting(containerEl).setName("Show Quick Create Button").setDesc('Show a "+" icon on folders to quickly create a new note.').addToggle((toggle) => toggle.setValue(this.plugin.settings.showQuickCreateButton).onChange((value) => __async(this, null, function* () {
+      this.plugin.settings.showQuickCreateButton = value;
+      yield this.plugin.saveSettings();
+      if (!value) {
+        document.querySelectorAll(".toolkit-plus-icon").forEach((el) => el.remove());
+      } else {
+        this.plugin.injectCreateButtons();
+      }
     })));
   }
 };
