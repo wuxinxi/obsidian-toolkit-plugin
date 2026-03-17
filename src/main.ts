@@ -4,6 +4,7 @@ interface ToolkitPluginSettings {
 	isHidden: boolean;
 	autoOpenWolaiFolders: boolean;
 	showQuickCreateButton: boolean;
+	showQuickCreateFolderButton: boolean;
 	lockDragAndDrop: boolean;
 }
 
@@ -11,6 +12,7 @@ const DEFAULT_SETTINGS: ToolkitPluginSettings = {
 	isHidden: true,
 	autoOpenWolaiFolders: true,
 	showQuickCreateButton: true,
+	showQuickCreateFolderButton: true,
 	lockDragAndDrop: false
 }
 
@@ -79,8 +81,8 @@ export default class ToolkitPlugin extends Plugin {
 
 			const target = evt.target as HTMLElement;
 			
-			// Ignore if clicking the plus icon (handled locally on the element)
-			if (target.closest('.toolkit-plus-icon')) return;
+			// Ignore if clicking the action icons (handled locally on the element)
+			if (target.closest('.toolkit-icons-container') || target.closest('.toolkit-action-icon')) return;
 
 			// If clicking the collapse arrow, don't trigger auto-open
 			if (target.classList.contains('nav-folder-collapse-indicator') || 
@@ -105,36 +107,55 @@ export default class ToolkitPlugin extends Plugin {
 	}
 
 	injectCreateButtons() {
-		if (!this.settings.showQuickCreateButton) return;
+		if (!this.settings.showQuickCreateButton && !this.settings.showQuickCreateFolderButton) return;
 
-		const folderTitles = document.querySelectorAll('.nav-folder-title:not(.has-toolkit-icon)');
+		const folderTitles = document.querySelectorAll('.nav-folder-title:not(.has-toolkit-icons)');
 		folderTitles.forEach(el => {
 			const folderTitleEl = el as HTMLElement;
-			folderTitleEl.addClass('has-toolkit-icon');
+			folderTitleEl.addClass('has-toolkit-icons');
 
-			const iconContainer = folderTitleEl.createEl('div', { cls: 'toolkit-plus-icon' });
-			setIcon(iconContainer, 'plus-with-circle');
-			iconContainer.setAttr('aria-label', 'New note');
+			const container = folderTitleEl.createEl('div', { cls: 'toolkit-icons-container' });
 
-			// Aggressive blocking on the icon itself
-			['mousedown', 'mouseup', 'click', 'pointerdown', 'pointerup'].forEach(type => {
-				iconContainer.addEventListener(type, (evt: any) => {
-					evt.stopPropagation();
-					evt.stopImmediatePropagation();
-					if (type === 'mousedown' || type === 'click') evt.preventDefault();
+			if (this.settings.showQuickCreateFolderButton) {
+				const folderIconContainer = container.createEl('div', { cls: 'toolkit-action-icon toolkit-folder-icon' });
+				setIcon(folderIconContainer, 'folder-plus');
+				folderIconContainer.setAttr('aria-label', 'New folder');
 
-					// Trigger creation ONLY on mousedown
-					if (type === 'mousedown' && evt.button === 0) {
-						const path = folderTitleEl.getAttr('data-path');
-						if (path) {
-							const folder = this.app.vault.getAbstractFileByPath(path);
-							if (folder instanceof TFolder) {
+				this.attachCreateListener(folderIconContainer, folderTitleEl, 'folder');
+			}
+
+			if (this.settings.showQuickCreateButton) {
+				const noteIconContainer = container.createEl('div', { cls: 'toolkit-action-icon toolkit-note-icon' });
+				setIcon(noteIconContainer, 'plus-with-circle');
+				noteIconContainer.setAttr('aria-label', 'New note');
+
+				this.attachCreateListener(noteIconContainer, folderTitleEl, 'note');
+			}
+		});
+	}
+
+	attachCreateListener(iconEl: HTMLElement, folderTitleEl: HTMLElement, type: 'note' | 'folder') {
+		['mousedown', 'mouseup', 'click', 'pointerdown', 'pointerup'].forEach(eventType => {
+			iconEl.addEventListener(eventType, (evt: any) => {
+				evt.stopPropagation();
+				evt.stopImmediatePropagation();
+				if (eventType === 'mousedown' || eventType === 'click') evt.preventDefault();
+
+				// Trigger creation ONLY on mousedown
+				if (eventType === 'mousedown' && evt.button === 0) {
+					const path = folderTitleEl.getAttr('data-path');
+					if (path) {
+						const folder = this.app.vault.getAbstractFileByPath(path);
+						if (folder instanceof TFolder) {
+							if (type === 'note') {
 								this.handleQuickCreate(folder, path);
+							} else {
+								this.handleQuickCreateFolder(folder, path);
 							}
 						}
 					}
-				}, true);
-			});
+				}
+			}, true);
 		});
 	}
 
@@ -171,6 +192,63 @@ export default class ToolkitPlugin extends Plugin {
 			}
 		} catch (e) {
 			console.error('toolkitPlusin: Quick create failed', e);
+		}
+	}
+
+	async handleQuickCreateFolder(folder: TFolder, path: string) {
+		try {
+			// 1. Hard Expand: Programmatically set to expanded
+			const explorerLeaves = this.app.workspace.getLeavesOfType('file-explorer');
+			explorerLeaves.forEach(leaf => {
+				const view = leaf.view as any;
+				if (view.fileItems && view.fileItems[path]) {
+					view.fileItems[path].setCollapsed(false);
+				}
+			});
+
+			// 2. Create the folder "未命名" (handle naming conflicts similar to native Obsidian)
+			let newFolderName = "未命名";
+			let counter = 1;
+			let newFolderPath = `${path}/${newFolderName}`;
+			
+			while (this.app.vault.getAbstractFileByPath(newFolderPath)) {
+				newFolderName = `未命名 ${counter}`;
+				newFolderPath = `${path}/${newFolderName}`;
+				counter++;
+			}
+
+			const newFolder = await this.app.vault.createFolder(newFolderPath);
+
+			// 3. Attempt to trigger the native rename behavior.
+			// The native file explorer view has a tree structure where we can trigger renaming.
+			if (newFolder) {
+				setTimeout(() => {
+					explorerLeaves.forEach(leaf => {
+						const view = leaf.view as any;
+						if (view.revealFile) {
+							// Forcing UI to show the new folder
+							view.revealFile(newFolder).then(() => {
+								if (view.fileItems && view.fileItems[newFolderPath]) {
+									// Try to trigger the rename action on the newly created folder item
+									const folderItem = view.fileItems[newFolderPath];
+									if (folderItem.setRename) {
+										folderItem.setRename(true);
+									} else {
+										// Fallback if setRename is unavailable, perhaps selecting the name element and calling focus
+										const titleEl = folderItem.titleInnerEl as HTMLElement;
+										if (titleEl) {
+											const evt = new MouseEvent('click', { detail: 1 });
+											titleEl.dispatchEvent(evt); // sometimes native double click or specific internal action is needed
+										}
+									}
+								}
+							});
+						}
+					});
+				}, 100); // Slight delay to ensure DOM is updated after folder creation
+			}
+		} catch (e) {
+			console.error('toolkitPlusin: Quick create folder failed', e);
 		}
 	}
 
@@ -236,8 +314,8 @@ export default class ToolkitPlugin extends Plugin {
 	onunload() {
 		document.body.classList.remove('hide-image-folder', 'is-drag-locked');
 		// Remove all injected buttons and classes
-		document.querySelectorAll('.toolkit-plus-icon').forEach(el => el.remove());
-		document.querySelectorAll('.has-toolkit-icon').forEach(el => el.classList.remove('has-toolkit-icon'));
+		document.querySelectorAll('.toolkit-icons-container').forEach(el => el.remove());
+		document.querySelectorAll('.has-toolkit-icons').forEach(el => el.classList.remove('has-toolkit-icons'));
 	}
 
 	async loadSettings() {
@@ -293,11 +371,26 @@ class ToolkitPluginSettingTab extends PluginSettingTab {
 				.onChange(async (value) => {
 					this.plugin.settings.showQuickCreateButton = value;
 					await this.plugin.saveSettings();
-					if (!value) {
-						document.querySelectorAll('.toolkit-plus-icon').forEach(el => el.remove());
-					} else {
-						this.plugin.injectCreateButtons();
-					}
+					
+					// Re-inject buttons to reflect changes
+					document.querySelectorAll('.toolkit-icons-container').forEach(el => el.remove());
+					document.querySelectorAll('.has-toolkit-icons').forEach(el => el.classList.remove('has-toolkit-icons'));
+					this.plugin.injectCreateButtons();
+				}));
+
+		new Setting(containerEl)
+			.setName('Show Quick Create Folder Button')
+			.setDesc('Show a folder icon on folders to quickly create a new folder.')
+			.addToggle(toggle => toggle
+				.setValue(this.plugin.settings.showQuickCreateFolderButton)
+				.onChange(async (value) => {
+					this.plugin.settings.showQuickCreateFolderButton = value;
+					await this.plugin.saveSettings();
+					
+					// Re-inject buttons to reflect changes
+					document.querySelectorAll('.toolkit-icons-container').forEach(el => el.remove());
+					document.querySelectorAll('.has-toolkit-icons').forEach(el => el.classList.remove('has-toolkit-icons'));
+					this.plugin.injectCreateButtons();
 				}));
 
 		new Setting(containerEl)

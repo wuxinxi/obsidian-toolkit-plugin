@@ -17,7 +17,7 @@ body.is-drag-locked .nav-folder-title {
     position: relative !important;
 }
 
-.toolkit-plus-icon {
+.toolkit-icons-container {
     display: none !important;
     position: absolute !important;
     right: 4px !important;
@@ -26,32 +26,40 @@ body.is-drag-locked .nav-folder-title {
     
     align-items: center;
     justify-content: center;
+    gap: 4px;
+    z-index: 20;
+    padding: 0 !important;
+    margin: 0 !important;
+}
+
+.toolkit-action-icon {
+    display: flex;
+    align-items: center;
+    justify-content: center;
     width: 20px !important;
     height: 20px !important;
     border-radius: 4px;
     opacity: 0.5;
     cursor: pointer;
-    z-index: 20;
     transition: opacity 0.2s, background-color 0.2s;
-    padding: 0 !important;
-    margin: 0 !important;
 }
 
-.toolkit-plus-icon:hover {
+.toolkit-action-icon:hover {
     opacity: 1 !important;
     background-color: var(--background-modifier-hover) !important;
 }
 
-.nav-folder-title:hover .toolkit-plus-icon {
+.nav-folder-title:hover .toolkit-icons-container {
     display: flex !important;
 }
 
-/* Ensure the text doesn't overlap with the icon on hover */
+/* Ensure the text doesn't overlap with the icons on hover. 
+   Increased padding to account for two icons (20px each + 4px gap + padding) */
 .nav-folder-title:hover {
-    padding-right: 30px !important;
+    padding-right: 54px !important;
 }
 
-.toolkit-plus-icon svg {
+.toolkit-action-icon svg {
     width: 14px !important;
     height: 14px !important;
     color: var(--text-muted);

@@ -56,6 +56,7 @@ var DEFAULT_SETTINGS = {
   isHidden: true,
   autoOpenWolaiFolders: true,
   showQuickCreateButton: true,
+  showQuickCreateFolderButton: true,
   lockDragAndDrop: false
 };
 var ToolkitPlugin = class extends import_obsidian.Plugin {
@@ -103,7 +104,7 @@ var ToolkitPlugin = class extends import_obsidian.Plugin {
         if (!this.settings.autoOpenWolaiFolders)
           return;
         const target = evt.target;
-        if (target.closest(".toolkit-plus-icon"))
+        if (target.closest(".toolkit-icons-container") || target.closest(".toolkit-action-icon"))
           return;
         if (target.classList.contains("nav-folder-collapse-indicator") || target.closest(".nav-folder-collapse-indicator")) {
           return;
@@ -123,32 +124,48 @@ var ToolkitPlugin = class extends import_obsidian.Plugin {
     });
   }
   injectCreateButtons() {
-    if (!this.settings.showQuickCreateButton)
+    if (!this.settings.showQuickCreateButton && !this.settings.showQuickCreateFolderButton)
       return;
-    const folderTitles = document.querySelectorAll(".nav-folder-title:not(.has-toolkit-icon)");
+    const folderTitles = document.querySelectorAll(".nav-folder-title:not(.has-toolkit-icons)");
     folderTitles.forEach((el) => {
       const folderTitleEl = el;
-      folderTitleEl.addClass("has-toolkit-icon");
-      const iconContainer = folderTitleEl.createEl("div", { cls: "toolkit-plus-icon" });
-      (0, import_obsidian.setIcon)(iconContainer, "plus-with-circle");
-      iconContainer.setAttr("aria-label", "New note");
-      ["mousedown", "mouseup", "click", "pointerdown", "pointerup"].forEach((type) => {
-        iconContainer.addEventListener(type, (evt) => {
-          evt.stopPropagation();
-          evt.stopImmediatePropagation();
-          if (type === "mousedown" || type === "click")
-            evt.preventDefault();
-          if (type === "mousedown" && evt.button === 0) {
-            const path = folderTitleEl.getAttr("data-path");
-            if (path) {
-              const folder = this.app.vault.getAbstractFileByPath(path);
-              if (folder instanceof import_obsidian.TFolder) {
+      folderTitleEl.addClass("has-toolkit-icons");
+      const container = folderTitleEl.createEl("div", { cls: "toolkit-icons-container" });
+      if (this.settings.showQuickCreateFolderButton) {
+        const folderIconContainer = container.createEl("div", { cls: "toolkit-action-icon toolkit-folder-icon" });
+        (0, import_obsidian.setIcon)(folderIconContainer, "folder-plus");
+        folderIconContainer.setAttr("aria-label", "New folder");
+        this.attachCreateListener(folderIconContainer, folderTitleEl, "folder");
+      }
+      if (this.settings.showQuickCreateButton) {
+        const noteIconContainer = container.createEl("div", { cls: "toolkit-action-icon toolkit-note-icon" });
+        (0, import_obsidian.setIcon)(noteIconContainer, "plus-with-circle");
+        noteIconContainer.setAttr("aria-label", "New note");
+        this.attachCreateListener(noteIconContainer, folderTitleEl, "note");
+      }
+    });
+  }
+  attachCreateListener(iconEl, folderTitleEl, type) {
+    ["mousedown", "mouseup", "click", "pointerdown", "pointerup"].forEach((eventType) => {
+      iconEl.addEventListener(eventType, (evt) => {
+        evt.stopPropagation();
+        evt.stopImmediatePropagation();
+        if (eventType === "mousedown" || eventType === "click")
+          evt.preventDefault();
+        if (eventType === "mousedown" && evt.button === 0) {
+          const path = folderTitleEl.getAttr("data-path");
+          if (path) {
+            const folder = this.app.vault.getAbstractFileByPath(path);
+            if (folder instanceof import_obsidian.TFolder) {
+              if (type === "note") {
                 this.handleQuickCreate(folder, path);
+              } else {
+                this.handleQuickCreateFolder(folder, path);
               }
             }
           }
-        }, true);
-      });
+        }
+      }, true);
     });
   }
   handleQuickCreate(folder, path) {
@@ -179,6 +196,53 @@ var ToolkitPlugin = class extends import_obsidian.Plugin {
         }
       } catch (e) {
         console.error("toolkitPlusin: Quick create failed", e);
+      }
+    });
+  }
+  handleQuickCreateFolder(folder, path) {
+    return __async(this, null, function* () {
+      try {
+        const explorerLeaves = this.app.workspace.getLeavesOfType("file-explorer");
+        explorerLeaves.forEach((leaf) => {
+          const view = leaf.view;
+          if (view.fileItems && view.fileItems[path]) {
+            view.fileItems[path].setCollapsed(false);
+          }
+        });
+        let newFolderName = "\u672A\u547D\u540D";
+        let counter = 1;
+        let newFolderPath = `${path}/${newFolderName}`;
+        while (this.app.vault.getAbstractFileByPath(newFolderPath)) {
+          newFolderName = `\u672A\u547D\u540D ${counter}`;
+          newFolderPath = `${path}/${newFolderName}`;
+          counter++;
+        }
+        const newFolder = yield this.app.vault.createFolder(newFolderPath);
+        if (newFolder) {
+          setTimeout(() => {
+            explorerLeaves.forEach((leaf) => {
+              const view = leaf.view;
+              if (view.revealFile) {
+                view.revealFile(newFolder).then(() => {
+                  if (view.fileItems && view.fileItems[newFolderPath]) {
+                    const folderItem = view.fileItems[newFolderPath];
+                    if (folderItem.setRename) {
+                      folderItem.setRename(true);
+                    } else {
+                      const titleEl = folderItem.titleInnerEl;
+                      if (titleEl) {
+                        const evt = new MouseEvent("click", { detail: 1 });
+                        titleEl.dispatchEvent(evt);
+                      }
+                    }
+                  }
+                });
+              }
+            });
+          }, 100);
+        }
+      } catch (e) {
+        console.error("toolkitPlusin: Quick create folder failed", e);
       }
     });
   }
@@ -236,8 +300,8 @@ var ToolkitPlugin = class extends import_obsidian.Plugin {
   }
   onunload() {
     document.body.classList.remove("hide-image-folder", "is-drag-locked");
-    document.querySelectorAll(".toolkit-plus-icon").forEach((el) => el.remove());
-    document.querySelectorAll(".has-toolkit-icon").forEach((el) => el.classList.remove("has-toolkit-icon"));
+    document.querySelectorAll(".toolkit-icons-container").forEach((el) => el.remove());
+    document.querySelectorAll(".has-toolkit-icons").forEach((el) => el.classList.remove("has-toolkit-icons"));
   }
   loadSettings() {
     return __async(this, null, function* () {
@@ -271,11 +335,16 @@ var ToolkitPluginSettingTab = class extends import_obsidian.PluginSettingTab {
     new import_obsidian.Setting(containerEl).setName("Show Quick Create Button").setDesc('Show a "+" icon on folders to quickly create a new note.').addToggle((toggle) => toggle.setValue(this.plugin.settings.showQuickCreateButton).onChange((value) => __async(this, null, function* () {
       this.plugin.settings.showQuickCreateButton = value;
       yield this.plugin.saveSettings();
-      if (!value) {
-        document.querySelectorAll(".toolkit-plus-icon").forEach((el) => el.remove());
-      } else {
-        this.plugin.injectCreateButtons();
-      }
+      document.querySelectorAll(".toolkit-icons-container").forEach((el) => el.remove());
+      document.querySelectorAll(".has-toolkit-icons").forEach((el) => el.classList.remove("has-toolkit-icons"));
+      this.plugin.injectCreateButtons();
+    })));
+    new import_obsidian.Setting(containerEl).setName("Show Quick Create Folder Button").setDesc("Show a folder icon on folders to quickly create a new folder.").addToggle((toggle) => toggle.setValue(this.plugin.settings.showQuickCreateFolderButton).onChange((value) => __async(this, null, function* () {
+      this.plugin.settings.showQuickCreateFolderButton = value;
+      yield this.plugin.saveSettings();
+      document.querySelectorAll(".toolkit-icons-container").forEach((el) => el.remove());
+      document.querySelectorAll(".has-toolkit-icons").forEach((el) => el.classList.remove("has-toolkit-icons"));
+      this.plugin.injectCreateButtons();
     })));
     new import_obsidian.Setting(containerEl).setName("Lock File Explorer Drag-and-Drop").setDesc("Prevent accidental moving of files and folders in the file explorer.").addToggle((toggle) => toggle.setValue(this.plugin.settings.lockDragAndDrop).onChange((value) => __async(this, null, function* () {
       this.plugin.settings.lockDragAndDrop = value;
