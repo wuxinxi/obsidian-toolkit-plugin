@@ -256,10 +256,8 @@ var ToolkitPlugin = class extends import_obsidian.Plugin {
       const mdFiles = children.filter((child) => child instanceof import_obsidian.TFile && child.extension === "md");
       if (mdFiles.length === 1) {
         const file = mdFiles[0];
-        if (file.basename.toLowerCase() === folder.name.toLowerCase()) {
-          const leaf = this.app.workspace.getLeaf(false);
-          leaf.openFile(file);
-        }
+        const leaf = this.app.workspace.getLeaf(false);
+        leaf.openFile(file);
       }
     });
   }

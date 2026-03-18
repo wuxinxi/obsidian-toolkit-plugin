@@ -264,10 +264,8 @@ export default class ToolkitPlugin extends Plugin {
 		// Check if there is exactly one md file and its name matches the folder name
 		if (mdFiles.length === 1) {
 			const file = mdFiles[0];
-			if (file.basename.toLowerCase() === folder.name.toLowerCase()) {
-				const leaf = this.app.workspace.getLeaf(false);
-				leaf.openFile(file);
-			}
+			const leaf = this.app.workspace.getLeaf(false);
+			leaf.openFile(file);
 		}
 	}
 
