@@ -11,6 +11,7 @@ import {
 	TFile,
 	setIcon
 } from 'obsidian';
+import { t } from './i18n';
 
 interface ToolkitPluginSettings {
 	isHidden: boolean;
@@ -43,14 +44,14 @@ export default class ToolkitPlugin extends Plugin {
 		await this.loadSettings();
 
 		// Add Ribbon Icon for Toggling Image Folders
-		this.addRibbonIcon('image-off', 'Toggle Image Folders', (evt: MouseEvent) => {
+		this.addRibbonIcon('image-off', t('RIBBON_TOGGLE_IMAGES'), (evt: MouseEvent) => {
 			this.toggleVisibility();
 		});
 
 		// Add Ribbon Icon for Toggling Drag-and-Drop Lock
 		this.lockRibbonEl = this.addRibbonIcon(
 			this.settings.lockDragAndDrop ? 'lock' : 'unlock',
-			'Toggle Drag-and-Drop Lock',
+			t('RIBBON_TOGGLE_DRAG'),
 			(evt: MouseEvent) => {
 				this.toggleDragLock();
 			}
@@ -59,7 +60,7 @@ export default class ToolkitPlugin extends Plugin {
 		// Add Ribbon Icon for One-Click Folding
 		this.foldRibbonEl = this.addRibbonIcon(
 			'chevrons-down-up',
-			'Fold All H1 Headings',
+			t('RIBBON_FOLD_H1'),
 			(evt: MouseEvent) => {
 				this.foldHeadingsByLevel(this.settings.defaultFoldLevel);
 			}
@@ -73,7 +74,7 @@ export default class ToolkitPlugin extends Plugin {
 		// Add Command Palette items
 		this.addCommand({
 			id: 'toggle-image-folder-visibility',
-			name: 'Toggle Image Folder Visibility',
+			name: t('COMMAND_TOGGLE_IMAGES'),
 			callback: () => {
 				this.toggleVisibility();
 			}
@@ -81,7 +82,7 @@ export default class ToolkitPlugin extends Plugin {
 
 		this.addCommand({
 			id: 'toggle-drag-lock',
-			name: 'Toggle File Explorer Drag-and-Drop Lock',
+			name: t('COMMAND_TOGGLE_DRAG'),
 			callback: () => {
 				this.toggleDragLock();
 			}
@@ -89,7 +90,7 @@ export default class ToolkitPlugin extends Plugin {
 
 		this.addCommand({
 			id: 'fold-all-h1',
-			name: 'Fold All H1 Headings',
+			name: t('COMMAND_FOLD_H1'),
 			callback: () => {
 				this.foldHeadingsByLevel(1);
 			}
@@ -97,7 +98,7 @@ export default class ToolkitPlugin extends Plugin {
 
 		this.addCommand({
 			id: 'fold-all-h2',
-			name: 'Fold All H2 Headings',
+			name: t('COMMAND_FOLD_H2'),
 			callback: () => {
 				this.foldHeadingsByLevel(2);
 			}
@@ -105,7 +106,7 @@ export default class ToolkitPlugin extends Plugin {
 
 		this.addCommand({
 			id: 'fold-all-h3',
-			name: 'Fold All H3 Headings',
+			name: t('COMMAND_FOLD_H3'),
 			callback: () => {
 				this.foldHeadingsByLevel(3);
 			}
@@ -113,7 +114,7 @@ export default class ToolkitPlugin extends Plugin {
 
 		this.addCommand({
 			id: 'collapse-all-headings',
-			name: 'Collapse All Headings (Native)',
+			name: t('COMMAND_FOLD_ALL'),
 			callback: () => {
 				(this.app as any).commands.executeCommandById('editor:fold-all');
 			}
@@ -126,7 +127,7 @@ export default class ToolkitPlugin extends Plugin {
 				// Check if the drag is coming from the file explorer
 				if (target.closest('.nav-file') || target.closest('.nav-folder')) {
 					evt.preventDefault();
-					new Notice('File drag-and-drop is locked by ToolkitPlugin.');
+					new Notice(t('NOTICE_DRAG_LOCKED_WARN'));
 				}
 			}
 		}, true);
@@ -175,7 +176,7 @@ export default class ToolkitPlugin extends Plugin {
 			this.app.workspace.on('editor-menu', (menu, editor, view) => {
 				menu.addItem((item) => {
 					item
-						.setTitle('Fold All H1 Headings')
+						.setTitle(t('COMMAND_FOLD_H1'))
 						.setIcon('chevrons-down-up')
 						.onClick(() => {
 							this.foldHeadingsByLevel(1);
@@ -198,7 +199,7 @@ export default class ToolkitPlugin extends Plugin {
 			if (this.settings.showQuickCreateFolderButton) {
 				const folderIconContainer = container.createEl('div', { cls: 'toolkit-action-icon toolkit-folder-icon' });
 				setIcon(folderIconContainer, 'folder-plus');
-				folderIconContainer.setAttr('aria-label', 'New folder');
+				folderIconContainer.setAttr('aria-label', t('NEW_FOLDER'));
 
 				this.attachCreateListener(folderIconContainer, folderTitleEl, 'folder');
 			}
@@ -206,7 +207,7 @@ export default class ToolkitPlugin extends Plugin {
 			if (this.settings.showQuickCreateButton) {
 				const noteIconContainer = container.createEl('div', { cls: 'toolkit-action-icon toolkit-note-icon' });
 				setIcon(noteIconContainer, 'plus-with-circle');
-				noteIconContainer.setAttr('aria-label', 'New note');
+				noteIconContainer.setAttr('aria-label', t('NEW_NOTE'));
 
 				this.attachCreateListener(noteIconContainer, folderTitleEl, 'note');
 			}
@@ -341,19 +342,19 @@ export default class ToolkitPlugin extends Plugin {
 
 			const controls = mermaidEl.createEl('div', { cls: 'toolkit-zoom-controls' });
 
-			const zoomOut = controls.createEl('div', { cls: 'toolkit-zoom-icon', attr: { 'aria-label': 'Zoom Out' } });
+			const zoomOut = controls.createEl('div', { cls: 'toolkit-zoom-icon', attr: { 'aria-label': t('MERMAID_ZOOM_OUT') } });
 			setIcon(zoomOut, 'minus');
 			zoomOut.onClickEvent(() => this.updateMermaidZoom(mermaidEl, -0.1));
 
-			const reset = controls.createEl('div', { cls: 'toolkit-zoom-icon', attr: { 'aria-label': 'Reset Zoom' } });
+			const reset = controls.createEl('div', { cls: 'toolkit-zoom-icon', attr: { 'aria-label': t('MERMAID_RESET') } });
 			setIcon(reset, 'refresh-ccw');
 			reset.onClickEvent(() => this.updateMermaidZoom(mermaidEl, 0, true));
 
-			const zoomIn = controls.createEl('div', { cls: 'toolkit-zoom-icon', attr: { 'aria-label': 'Zoom In' } });
+			const zoomIn = controls.createEl('div', { cls: 'toolkit-zoom-icon', attr: { 'aria-label': t('MERMAID_ZOOM_IN') } });
 			setIcon(zoomIn, 'plus');
 			zoomIn.onClickEvent(() => this.updateMermaidZoom(mermaidEl, 0.1));
 
-			const expand = controls.createEl('div', { cls: 'toolkit-zoom-icon', attr: { 'aria-label': 'Fullscreen' } });
+			const expand = controls.createEl('div', { cls: 'toolkit-zoom-icon', attr: { 'aria-label': t('MERMAID_FULLSCREEN') } });
 			setIcon(expand, 'maximize');
 			expand.onClickEvent(() => {
 				const svg = mermaidEl.querySelector('svg');
@@ -449,8 +450,8 @@ export default class ToolkitPlugin extends Plugin {
 		await this.saveSettings();
 		this.refreshDragLock();
 
-		const status = this.settings.lockDragAndDrop ? 'Locked' : 'Unlocked';
-		new Notice(`File drag-and-drop is now ${status}`);
+		const status = this.settings.lockDragAndDrop ? t('NOTICE_DRAG_LOCKED') : t('NOTICE_DRAG_UNLOCKED');
+		new Notice(status);
 	}
 
 	refreshDragLock() {
@@ -472,8 +473,8 @@ export default class ToolkitPlugin extends Plugin {
 		await this.saveSettings();
 		this.refreshVisibility();
 
-		const status = this.settings.isHidden ? 'Hidden' : 'Visible';
-		new Notice(`Image folders are now ${status}`);
+		const status = this.settings.isHidden ? t('NOTICE_IMAGES_HIDDEN') : t('NOTICE_IMAGES_VISIBLE');
+		new Notice(status);
 	}
 
 	refreshVisibility() {
@@ -523,7 +524,7 @@ class MermaidModal extends Modal {
 
 	onOpen() {
 		const { contentEl } = this;
-		this.titleEl.setText('Mermaid Diagram Viewer');
+		this.titleEl.setText(t('MERMAID_MODAL_TITLE'));
 
 		contentEl.addClass('toolkit-mermaid-modal-content');
 
@@ -607,11 +608,11 @@ class ToolkitSettingTab extends PluginSettingTab {
 
 		containerEl.empty();
 
-		containerEl.createEl('h2', { text: 'ToolkitPlugin Settings' });
+		containerEl.createEl('h2', { text: 'Toolkit Plugin Settings' });
 
 		new Setting(containerEl)
-			.setName('Hide Image Folders')
-			.setDesc('Hide all folders named "image" in the file explorer.')
+			.setName(t('HIDE_IMAGE_FOLDERS_NAME'))
+			.setDesc(t('HIDE_IMAGE_FOLDERS_DESC'))
 			.addToggle(toggle => toggle
 				.setValue(this.plugin.settings.isHidden)
 				.onChange(async (value) => {
@@ -621,8 +622,8 @@ class ToolkitSettingTab extends PluginSettingTab {
 				}));
 
 		new Setting(containerEl)
-			.setName('Auto-open Wolai-style Folders')
-			.setDesc('When clicking a folder containing only one MD file with the same name, open the file automatically.')
+			.setName(t('AUTO_OPEN_WOLAI_NAME'))
+			.setDesc(t('AUTO_OPEN_WOLAI_DESC'))
 			.addToggle(toggle => toggle
 				.setValue(this.plugin.settings.autoOpenWolaiFolders)
 				.onChange(async (value) => {
@@ -631,8 +632,8 @@ class ToolkitSettingTab extends PluginSettingTab {
 				}));
 
 		new Setting(containerEl)
-			.setName('Show Quick Create Button')
-			.setDesc('Show a "+" icon on folders to quickly create a new note.')
+			.setName(t('QUICK_CREATE_NOTE_NAME'))
+			.setDesc(t('QUICK_CREATE_NOTE_DESC'))
 			.addToggle(toggle => toggle
 				.setValue(this.plugin.settings.showQuickCreateButton)
 				.onChange(async (value) => {
@@ -646,8 +647,8 @@ class ToolkitSettingTab extends PluginSettingTab {
 				}));
 
 		new Setting(containerEl)
-			.setName('Show Quick Create Folder Button')
-			.setDesc('Show a folder icon on folders to quickly create a new folder.')
+			.setName(t('QUICK_CREATE_FOLDER_NAME'))
+			.setDesc(t('QUICK_CREATE_FOLDER_DESC'))
 			.addToggle(toggle => toggle
 				.setValue(this.plugin.settings.showQuickCreateFolderButton)
 				.onChange(async (value) => {
@@ -661,8 +662,8 @@ class ToolkitSettingTab extends PluginSettingTab {
 				}));
 
 		new Setting(containerEl)
-			.setName('Lock File Explorer Drag-and-Drop')
-			.setDesc('Prevent accidental moving of files and folders in the file explorer.')
+			.setName(t('LOCK_DRAG_NAME'))
+			.setDesc(t('LOCK_DRAG_DESC'))
 			.addToggle(toggle => toggle
 				.setValue(this.plugin.settings.lockDragAndDrop)
 				.onChange(async (value) => {
@@ -672,8 +673,8 @@ class ToolkitSettingTab extends PluginSettingTab {
 				}));
 
 		new Setting(containerEl)
-			.setName('Default Ribbon Fold Level')
-			.setDesc('Determines which heading level the ribbon icon should fold.')
+			.setName(t('FOLDING_LEVEL_NAME'))
+			.setDesc(t('FOLDING_LEVEL_DESC'))
 			.addSlider(slider => slider
 				.setLimits(1, 6, 1)
 				.setValue(this.plugin.settings.defaultFoldLevel)
@@ -684,8 +685,8 @@ class ToolkitSettingTab extends PluginSettingTab {
 				}));
 
 		new Setting(containerEl)
-			.setName('Scale Mermaid Diagrams')
-			.setDesc('Conform Mermaid diagrams to the note width (prevents them from being too large).')
+			.setName(t('SCALE_MERMAID_NAME'))
+			.setDesc(t('SCALE_MERMAID_DESC'))
 			.addToggle(toggle => toggle
 				.setValue(this.plugin.settings.scaleMermaid)
 				.onChange(async (value) => {
@@ -695,8 +696,8 @@ class ToolkitSettingTab extends PluginSettingTab {
 				}));
 
 		new Setting(containerEl)
-			.setName('Mermaid Zoom Sensitivity')
-			.setDesc('Adjust how fast Mermaid diagrams scale with your wheel/pinch gesture (Default: 1.0).')
+			.setName(t('MERMAID_SENSITIVITY_NAME'))
+			.setDesc(t('MERMAID_SENSITIVITY_DESC'))
 			.addSlider(slider => slider
 				.setLimits(0.1, 2.0, 0.1)
 				.setValue(this.plugin.settings.mermaidZoomSensitivity)
