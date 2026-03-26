@@ -150,18 +150,25 @@ body.toolkit-scale-mermaid .mermaid {
 
 .toolkit-mermaid-modal-container {
     flex: 1;
-    overflow: auto;
+    overflow: hidden; /* We handle scrolling via JS pan now */
     display: flex;
     justify-content: center;
-    align-items: flex-start;
-    padding: 40px;
+    align-items: center;
+    padding: 0;
     background-color: var(--background-primary);
+    cursor: grab;
+    touch-action: none; /* Crucial for pointer events and gestures */
+    user-select: none;
+}
+
+.toolkit-mermaid-modal-container.is-grabbing {
+    cursor: grabbing;
 }
 
 .toolkit-mermaid-modal-container svg {
-    max-width: 100% !important; /* Allow it to fit but... */
-    min-width: 600px; /* ...prevent it from being tiny */
+    max-width: none !important;
     width: auto !important;
     height: auto !important;
-    transform: none !important;
+    pointer-events: none !important; /* Let container handle pan/zoom */
+    /* Removed 'transform: none !important' to allow JS-based scaling */
 }

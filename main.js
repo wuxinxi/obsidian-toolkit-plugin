@@ -59,7 +59,8 @@ var DEFAULT_SETTINGS = {
   showQuickCreateFolderButton: true,
   lockDragAndDrop: false,
   defaultFoldLevel: 1,
-  scaleMermaid: true
+  scaleMermaid: true,
+  mermaidZoomSensitivity: 1
 };
 var ToolkitPlugin = class extends import_obsidian.Plugin {
   constructor() {
@@ -312,7 +313,7 @@ var ToolkitPlugin = class extends import_obsidian.Plugin {
       expand.onClickEvent(() => {
         const svg = mermaidEl.querySelector("svg");
         if (svg) {
-          new MermaidModal(this.app, svg.cloneNode(true)).open();
+          new MermaidModal(this.app, svg.cloneNode(true), this.settings.mermaidZoomSensitivity).open();
         }
       });
       mermaidEl.addEventListener("mouseleave", () => {
@@ -438,20 +439,66 @@ var ToolkitPlugin = class extends import_obsidian.Plugin {
   }
 };
 var MermaidModal = class extends import_obsidian.Modal {
-  constructor(app, svg) {
+  constructor(app, svg, sensitivity) {
     super(app);
     this.svg = svg;
+    this.sensitivity = sensitivity;
+    this.scale = 1;
+    this.x = 0;
+    this.y = 0;
+    this.isDragging = false;
+    this.startX = 0;
+    this.startY = 0;
   }
   onOpen() {
     const { contentEl } = this;
     this.titleEl.setText("Mermaid Diagram Viewer");
     contentEl.addClass("toolkit-mermaid-modal-content");
+    this.svg.removeAttribute("width");
+    this.svg.removeAttribute("height");
     this.svg.style.transform = "none";
     this.svg.style.maxWidth = "none";
     this.svg.style.width = "auto";
     this.svg.style.height = "auto";
-    const container = contentEl.createEl("div", { cls: "toolkit-mermaid-modal-container" });
-    container.appendChild(this.svg);
+    this.svg.style.transformOrigin = "center center";
+    this.container = contentEl.createEl("div", { cls: "toolkit-mermaid-modal-container" });
+    this.container.appendChild(this.svg);
+    this.setupInteraction();
+  }
+  setupInteraction() {
+    this.container.addEventListener("wheel", (e) => {
+      e.preventDefault();
+      const delta = -e.deltaY;
+      const speed = 1e-3 * this.sensitivity;
+      const factor = Math.exp(delta * speed);
+      const newScale = this.scale * factor;
+      this.scale = Math.max(0.1, Math.min(20, newScale));
+      this.updateTransform();
+    }, { passive: false });
+    this.container.addEventListener("pointerdown", (e) => {
+      this.isDragging = true;
+      this.startX = e.clientX - this.x;
+      this.startY = e.clientY - this.y;
+      this.container.setPointerCapture(e.pointerId);
+      this.container.addClass("is-grabbing");
+    });
+    this.container.addEventListener("pointermove", (e) => {
+      if (!this.isDragging)
+        return;
+      this.x = e.clientX - this.startX;
+      this.y = e.clientY - this.startY;
+      this.updateTransform();
+    });
+    this.container.addEventListener("pointerup", (e) => {
+      this.isDragging = false;
+      this.container.releasePointerCapture(e.pointerId);
+      this.container.removeClass("is-grabbing");
+    });
+  }
+  updateTransform() {
+    if (this.svg) {
+      this.svg.style.transform = `translate(${this.x}px, ${this.y}px) scale(${this.scale})`;
+    }
   }
   onClose() {
     const { contentEl } = this;
@@ -503,6 +550,10 @@ var ToolkitSettingTab = class extends import_obsidian.PluginSettingTab {
       this.plugin.settings.scaleMermaid = value;
       yield this.plugin.saveSettings();
       this.plugin.refreshMermaidScaling();
+    })));
+    new import_obsidian.Setting(containerEl).setName("Mermaid Zoom Sensitivity").setDesc("Adjust how fast Mermaid diagrams scale with your wheel/pinch gesture (Default: 1.0).").addSlider((slider) => slider.setLimits(0.1, 2, 0.1).setValue(this.plugin.settings.mermaidZoomSensitivity).setDynamicTooltip().onChange((value) => __async(this, null, function* () {
+      this.plugin.settings.mermaidZoomSensitivity = value;
+      yield this.plugin.saveSettings();
     })));
   }
 };

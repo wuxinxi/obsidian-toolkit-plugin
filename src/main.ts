@@ -20,6 +20,7 @@ interface ToolkitPluginSettings {
 	lockDragAndDrop: boolean;
 	defaultFoldLevel: number;
 	scaleMermaid: boolean;
+	mermaidZoomSensitivity: number;
 }
 
 const DEFAULT_SETTINGS: ToolkitPluginSettings = {
@@ -29,7 +30,8 @@ const DEFAULT_SETTINGS: ToolkitPluginSettings = {
 	showQuickCreateFolderButton: true,
 	lockDragAndDrop: false,
 	defaultFoldLevel: 1,
-	scaleMermaid: true
+	scaleMermaid: true,
+	mermaidZoomSensitivity: 1.0
 }
 
 export default class ToolkitPlugin extends Plugin {
@@ -356,7 +358,7 @@ export default class ToolkitPlugin extends Plugin {
 			expand.onClickEvent(() => {
 				const svg = mermaidEl.querySelector('svg');
 				if (svg) {
-					new MermaidModal(this.app, svg.cloneNode(true) as SVGElement).open();
+					new MermaidModal(this.app, svg.cloneNode(true) as SVGElement, this.settings.mermaidZoomSensitivity).open();
 				}
 			});
 
@@ -507,7 +509,15 @@ export default class ToolkitPlugin extends Plugin {
 }
 
 class MermaidModal extends Modal {
-	constructor(app: App, private svg: SVGElement) {
+	private scale = 1.0;
+	private x = 0;
+	private y = 0;
+	private isDragging = false;
+	private startX = 0;
+	private startY = 0;
+	private container!: HTMLDivElement;
+
+	constructor(app: App, private svg: SVGElement, private sensitivity: number) {
 		super(app);
 	}
 
@@ -518,13 +528,64 @@ class MermaidModal extends Modal {
 		contentEl.addClass('toolkit-mermaid-modal-content');
 
 		// Remove scaling styles from clone
+		this.svg.removeAttribute('width');
+		this.svg.removeAttribute('height');
 		this.svg.style.transform = 'none';
 		this.svg.style.maxWidth = 'none';
 		this.svg.style.width = 'auto';
 		this.svg.style.height = 'auto';
+		this.svg.style.transformOrigin = 'center center';
 
-		const container = contentEl.createEl('div', { cls: 'toolkit-mermaid-modal-container' });
-		container.appendChild(this.svg);
+		this.container = contentEl.createEl('div', { cls: 'toolkit-mermaid-modal-container' });
+		this.container.appendChild(this.svg);
+
+		this.setupInteraction();
+	}
+
+	private setupInteraction() {
+		// Wheel Zoom
+		this.container.addEventListener('wheel', (e: WheelEvent) => {
+			e.preventDefault();
+			
+			// Handle pinch zoom (ctrlKey is true for pinch on trackpads)
+			const delta = -e.deltaY;
+			// Refined sensitivity: 0.001 is a good base for trackpad deltas
+			const speed = 0.001 * this.sensitivity; 
+			const factor = Math.exp(delta * speed);
+			const newScale = this.scale * factor;
+			
+			// Min/Max Scale
+			this.scale = Math.max(0.1, Math.min(20, newScale));
+			this.updateTransform();
+		}, { passive: false });
+
+		// Drag Pan
+		this.container.addEventListener('pointerdown', (e: PointerEvent) => {
+			this.isDragging = true;
+			this.startX = e.clientX - this.x;
+			this.startY = e.clientY - this.y;
+			this.container.setPointerCapture(e.pointerId);
+			this.container.addClass('is-grabbing');
+		});
+
+		this.container.addEventListener('pointermove', (e: PointerEvent) => {
+			if (!this.isDragging) return;
+			this.x = e.clientX - this.startX;
+			this.y = e.clientY - this.startY;
+			this.updateTransform();
+		});
+
+		this.container.addEventListener('pointerup', (e: PointerEvent) => {
+			this.isDragging = false;
+			this.container.releasePointerCapture(e.pointerId);
+			this.container.removeClass('is-grabbing');
+		});
+	}
+
+	private updateTransform() {
+		if (this.svg) {
+			this.svg.style.transform = `translate(${this.x}px, ${this.y}px) scale(${this.scale})`;
+		}
 	}
 
 	onClose() {
@@ -631,6 +692,18 @@ class ToolkitSettingTab extends PluginSettingTab {
 					this.plugin.settings.scaleMermaid = value;
 					await this.plugin.saveSettings();
 					this.plugin.refreshMermaidScaling();
+				}));
+
+		new Setting(containerEl)
+			.setName('Mermaid Zoom Sensitivity')
+			.setDesc('Adjust how fast Mermaid diagrams scale with your wheel/pinch gesture (Default: 1.0).')
+			.addSlider(slider => slider
+				.setLimits(0.1, 2.0, 0.1)
+				.setValue(this.plugin.settings.mermaidZoomSensitivity)
+				.setDynamicTooltip()
+				.onChange(async (value) => {
+					this.plugin.settings.mermaidZoomSensitivity = value;
+					await this.plugin.saveSettings();
 				}));
 	}
 }
