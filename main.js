@@ -57,13 +57,15 @@ var DEFAULT_SETTINGS = {
   autoOpenWolaiFolders: true,
   showQuickCreateButton: true,
   showQuickCreateFolderButton: true,
-  lockDragAndDrop: false
+  lockDragAndDrop: false,
+  defaultFoldLevel: 1
 };
 var ToolkitPlugin = class extends import_obsidian.Plugin {
   constructor() {
     super(...arguments);
     this.settings = DEFAULT_SETTINGS;
     this.lockRibbonEl = null;
+    this.foldRibbonEl = null;
   }
   onload() {
     return __async(this, null, function* () {
@@ -73,6 +75,9 @@ var ToolkitPlugin = class extends import_obsidian.Plugin {
       });
       this.lockRibbonEl = this.addRibbonIcon(this.settings.lockDragAndDrop ? "lock" : "unlock", "Toggle Drag-and-Drop Lock", (evt) => {
         this.toggleDragLock();
+      });
+      this.foldRibbonEl = this.addRibbonIcon("chevrons-down-up", "Fold All H1 Headings", (evt) => {
+        this.foldHeadingsByLevel(this.settings.defaultFoldLevel);
       });
       this.refreshDragLock();
       this.addCommand({
@@ -87,6 +92,34 @@ var ToolkitPlugin = class extends import_obsidian.Plugin {
         name: "Toggle File Explorer Drag-and-Drop Lock",
         callback: () => {
           this.toggleDragLock();
+        }
+      });
+      this.addCommand({
+        id: "fold-all-h1",
+        name: "Fold All H1 Headings",
+        callback: () => {
+          this.foldHeadingsByLevel(1);
+        }
+      });
+      this.addCommand({
+        id: "fold-all-h2",
+        name: "Fold All H2 Headings",
+        callback: () => {
+          this.foldHeadingsByLevel(2);
+        }
+      });
+      this.addCommand({
+        id: "fold-all-h3",
+        name: "Fold All H3 Headings",
+        callback: () => {
+          this.foldHeadingsByLevel(3);
+        }
+      });
+      this.addCommand({
+        id: "collapse-all-headings",
+        name: "Collapse All Headings (Native)",
+        callback: () => {
+          this.app.commands.executeCommandById("editor:fold-all");
         }
       });
       this.registerDomEvent(document, "dragstart", (evt) => {
@@ -121,6 +154,13 @@ var ToolkitPlugin = class extends import_obsidian.Plugin {
         }
       });
       this.registerInterval(window.setInterval(() => this.injectCreateButtons(), 1e3));
+      this.registerEvent(this.app.workspace.on("editor-menu", (menu, editor, view) => {
+        menu.addItem((item) => {
+          item.setTitle("Fold All H1 Headings").setIcon("chevrons-down-up").onClick(() => {
+            this.foldHeadingsByLevel(1);
+          });
+        });
+      }));
     });
   }
   injectCreateButtons() {
@@ -261,6 +301,31 @@ var ToolkitPlugin = class extends import_obsidian.Plugin {
       }
     });
   }
+  foldHeadingsByLevel(level) {
+    const view = this.app.workspace.getActiveViewOfType(import_obsidian.MarkdownView);
+    if (!view) {
+      return;
+    }
+    const editor = view.editor;
+    const file = view.file;
+    if (!file)
+      return;
+    const cache = this.app.metadataCache.getFileCache(file);
+    if (!cache || !cache.headings) {
+      return;
+    }
+    const cursor = editor.getCursor();
+    let found = false;
+    for (const heading of cache.headings) {
+      if (heading.level === level) {
+        const line = heading.position.start.line;
+        editor.setCursor(line, 0);
+        this.app.commands.executeCommandById("editor:toggle-fold");
+        found = true;
+      }
+    }
+    editor.setCursor(cursor);
+  }
   toggleDragLock() {
     return __async(this, null, function* () {
       this.settings.lockDragAndDrop = !this.settings.lockDragAndDrop;
@@ -348,6 +413,10 @@ var ToolkitPluginSettingTab = class extends import_obsidian.PluginSettingTab {
       this.plugin.settings.lockDragAndDrop = value;
       yield this.plugin.saveSettings();
       this.plugin.refreshDragLock();
+    })));
+    new import_obsidian.Setting(containerEl).setName("Default Ribbon Fold Level").setDesc("Determines which heading level the ribbon icon should fold.").addSlider((slider) => slider.setLimits(1, 6, 1).setValue(this.plugin.settings.defaultFoldLevel).setDynamicTooltip().onChange((value) => __async(this, null, function* () {
+      this.plugin.settings.defaultFoldLevel = value;
+      yield this.plugin.saveSettings();
     })));
   }
 };

@@ -1,4 +1,4 @@
-import { App, Plugin, PluginSettingTab, Setting, Notice, TFolder, TFile, setIcon } from 'obsidian';
+import { App, Plugin, PluginSettingTab, Setting, Notice, TFolder, TFile, setIcon, MarkdownView } from 'obsidian';
 
 interface ToolkitPluginSettings {
 	isHidden: boolean;
@@ -6,6 +6,7 @@ interface ToolkitPluginSettings {
 	showQuickCreateButton: boolean;
 	showQuickCreateFolderButton: boolean;
 	lockDragAndDrop: boolean;
+	defaultFoldLevel: number;
 }
 
 const DEFAULT_SETTINGS: ToolkitPluginSettings = {
@@ -13,12 +14,14 @@ const DEFAULT_SETTINGS: ToolkitPluginSettings = {
 	autoOpenWolaiFolders: true,
 	showQuickCreateButton: true,
 	showQuickCreateFolderButton: true,
-	lockDragAndDrop: false
+	lockDragAndDrop: false,
+	defaultFoldLevel: 1
 }
 
 export default class ToolkitPlugin extends Plugin {
 	settings: ToolkitPluginSettings = DEFAULT_SETTINGS;
 	private lockRibbonEl: HTMLElement | null = null;
+	private foldRibbonEl: HTMLElement | null = null;
 
 	async onload() {
 		await this.loadSettings();
@@ -34,6 +37,15 @@ export default class ToolkitPlugin extends Plugin {
 			'Toggle Drag-and-Drop Lock',
 			(evt: MouseEvent) => {
 				this.toggleDragLock();
+			}
+		);
+
+		// Add Ribbon Icon for One-Click Folding
+		this.foldRibbonEl = this.addRibbonIcon(
+			'chevrons-down-up',
+			'Fold All H1 Headings',
+			(evt: MouseEvent) => {
+				this.foldHeadingsByLevel(this.settings.defaultFoldLevel);
 			}
 		);
 
@@ -54,6 +66,38 @@ export default class ToolkitPlugin extends Plugin {
 			name: 'Toggle File Explorer Drag-and-Drop Lock',
 			callback: () => {
 				this.toggleDragLock();
+			}
+		});
+
+		this.addCommand({
+			id: 'fold-all-h1',
+			name: 'Fold All H1 Headings',
+			callback: () => {
+				this.foldHeadingsByLevel(1);
+			}
+		});
+
+		this.addCommand({
+			id: 'fold-all-h2',
+			name: 'Fold All H2 Headings',
+			callback: () => {
+				this.foldHeadingsByLevel(2);
+			}
+		});
+
+		this.addCommand({
+			id: 'fold-all-h3',
+			name: 'Fold All H3 Headings',
+			callback: () => {
+				this.foldHeadingsByLevel(3);
+			}
+		});
+
+		this.addCommand({
+			id: 'collapse-all-headings',
+			name: 'Collapse All Headings (Native)',
+			callback: () => {
+				(this.app as any).commands.executeCommandById('editor:fold-all');
 			}
 		});
 
@@ -104,6 +148,20 @@ export default class ToolkitPlugin extends Plugin {
 
 		// Periodically check and inject buttons
 		this.registerInterval(window.setInterval(() => this.injectCreateButtons(), 1000));
+
+		// Add Editor Menu (Right-click) integration
+		this.registerEvent(
+			this.app.workspace.on('editor-menu', (menu, editor, view) => {
+				menu.addItem((item) => {
+					item
+						.setTitle('Fold All H1 Headings')
+						.setIcon('chevrons-down-up')
+						.onClick(() => {
+							this.foldHeadingsByLevel(1);
+						});
+				});
+			})
+		);
 	}
 
 	injectCreateButtons() {
@@ -269,6 +327,41 @@ export default class ToolkitPlugin extends Plugin {
 		}
 	}
 
+	foldHeadingsByLevel(level: number) {
+		const view = this.app.workspace.getActiveViewOfType(MarkdownView);
+		if (!view) {
+			return;
+		}
+
+		const editor = view.editor;
+		const file = view.file;
+		if (!file) return;
+
+		const cache = this.app.metadataCache.getFileCache(file);
+		if (!cache || !cache.headings) {
+			return;
+		}
+
+		const cursor = editor.getCursor();
+		let found = false;
+		
+		// Unfold everything first to ensure a consistent state? 
+		// Actually, let's just try to fold.
+		
+		for (const heading of cache.headings) {
+			if (heading.level === level) {
+				const line = heading.position.start.line;
+				editor.setCursor(line, 0);
+				// 'editor:toggle-fold' will fold if expanded, and unfold if collapsed
+				(this.app as any).commands.executeCommandById('editor:toggle-fold');
+				found = true;
+			}
+		}
+
+		// Restore original cursor position
+		editor.setCursor(cursor);
+	}
+
 	async toggleDragLock() {
 		this.settings.lockDragAndDrop = !this.settings.lockDragAndDrop;
 		await this.saveSettings();
@@ -400,6 +493,18 @@ class ToolkitPluginSettingTab extends PluginSettingTab {
 					this.plugin.settings.lockDragAndDrop = value;
 					await this.plugin.saveSettings();
 					this.plugin.refreshDragLock();
+				}));
+
+		new Setting(containerEl)
+			.setName('Default Ribbon Fold Level')
+			.setDesc('Determines which heading level the ribbon icon should fold.')
+			.addSlider(slider => slider
+				.setLimits(1, 6, 1)
+				.setValue(this.plugin.settings.defaultFoldLevel)
+				.setDynamicTooltip()
+				.onChange(async (value) => {
+					this.plugin.settings.defaultFoldLevel = value;
+					await this.plugin.saveSettings();
 				}));
 	}
 }
