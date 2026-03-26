@@ -58,7 +58,8 @@ var DEFAULT_SETTINGS = {
   showQuickCreateButton: true,
   showQuickCreateFolderButton: true,
   lockDragAndDrop: false,
-  defaultFoldLevel: 1
+  defaultFoldLevel: 1,
+  scaleMermaid: true
 };
 var ToolkitPlugin = class extends import_obsidian.Plugin {
   constructor() {
@@ -80,6 +81,8 @@ var ToolkitPlugin = class extends import_obsidian.Plugin {
         this.foldHeadingsByLevel(this.settings.defaultFoldLevel);
       });
       this.refreshDragLock();
+      this.refreshVisibility();
+      this.refreshMermaidScaling();
       this.addCommand({
         id: "toggle-image-folder-visibility",
         name: "Toggle Image Folder Visibility",
@@ -131,7 +134,7 @@ var ToolkitPlugin = class extends import_obsidian.Plugin {
           }
         }
       }, true);
-      this.addSettingTab(new ToolkitPluginSettingTab(this.app, this));
+      this.addSettingTab(new ToolkitSettingTab(this.app, this));
       this.refreshVisibility();
       this.registerDomEvent(document, "click", (evt) => {
         if (!this.settings.autoOpenWolaiFolders)
@@ -154,6 +157,7 @@ var ToolkitPlugin = class extends import_obsidian.Plugin {
         }
       });
       this.registerInterval(window.setInterval(() => this.injectCreateButtons(), 1e3));
+      this.registerInterval(window.setInterval(() => this.injectMermaidZoomControls(), 1e3));
       this.registerEvent(this.app.workspace.on("editor-menu", (menu, editor, view) => {
         menu.addItem((item) => {
           item.setTitle("Fold All H1 Headings").setIcon("chevrons-down-up").onClick(() => {
@@ -286,6 +290,55 @@ var ToolkitPlugin = class extends import_obsidian.Plugin {
       }
     });
   }
+  injectMermaidZoomControls() {
+    if (!this.settings.scaleMermaid)
+      return;
+    const mermaidDivs = document.querySelectorAll(".mermaid:not(.has-toolkit-zoom)");
+    mermaidDivs.forEach((el) => {
+      const mermaidEl = el;
+      mermaidEl.addClass("has-toolkit-zoom");
+      const controls = mermaidEl.createEl("div", { cls: "toolkit-zoom-controls" });
+      const zoomOut = controls.createEl("div", { cls: "toolkit-zoom-icon", attr: { "aria-label": "Zoom Out" } });
+      (0, import_obsidian.setIcon)(zoomOut, "minus");
+      zoomOut.onClickEvent(() => this.updateMermaidZoom(mermaidEl, -0.1));
+      const reset = controls.createEl("div", { cls: "toolkit-zoom-icon", attr: { "aria-label": "Reset Zoom" } });
+      (0, import_obsidian.setIcon)(reset, "refresh-ccw");
+      reset.onClickEvent(() => this.updateMermaidZoom(mermaidEl, 0, true));
+      const zoomIn = controls.createEl("div", { cls: "toolkit-zoom-icon", attr: { "aria-label": "Zoom In" } });
+      (0, import_obsidian.setIcon)(zoomIn, "plus");
+      zoomIn.onClickEvent(() => this.updateMermaidZoom(mermaidEl, 0.1));
+      const expand = controls.createEl("div", { cls: "toolkit-zoom-icon", attr: { "aria-label": "Fullscreen" } });
+      (0, import_obsidian.setIcon)(expand, "maximize");
+      expand.onClickEvent(() => {
+        const svg = mermaidEl.querySelector("svg");
+        if (svg) {
+          new MermaidModal(this.app, svg.cloneNode(true)).open();
+        }
+      });
+      mermaidEl.addEventListener("mouseleave", () => {
+        this.updateMermaidZoom(mermaidEl, 0, true);
+      });
+    });
+  }
+  updateMermaidZoom(el, delta, reset = false) {
+    const svg = el.querySelector("svg");
+    if (!svg)
+      return;
+    let currentScale = parseFloat(el.getAttr("data-zoom") || "1.0");
+    if (reset) {
+      currentScale = 1;
+    } else {
+      currentScale = Math.max(0.1, Math.min(5, currentScale + delta));
+    }
+    el.setAttr("data-zoom", currentScale.toString());
+    svg.style.transform = `scale(${currentScale})`;
+    svg.style.transformOrigin = "top center";
+    if (currentScale > 1) {
+      el.style.overflowX = "auto";
+    } else {
+      el.style.overflowX = "hidden";
+    }
+  }
   handleFolderClick(folder) {
     return __async(this, null, function* () {
       const children = folder.children.filter((child) => {
@@ -361,8 +414,15 @@ var ToolkitPlugin = class extends import_obsidian.Plugin {
       document.body.classList.remove("hide-image-folder");
     }
   }
+  refreshMermaidScaling() {
+    if (this.settings.scaleMermaid) {
+      document.body.classList.add("toolkit-scale-mermaid");
+    } else {
+      document.body.classList.remove("toolkit-scale-mermaid");
+    }
+  }
   onunload() {
-    document.body.classList.remove("hide-image-folder", "is-drag-locked");
+    document.body.classList.remove("hide-image-folder", "is-drag-locked", "toolkit-scale-mermaid");
     document.querySelectorAll(".toolkit-icons-container").forEach((el) => el.remove());
     document.querySelectorAll(".has-toolkit-icons").forEach((el) => el.classList.remove("has-toolkit-icons"));
   }
@@ -377,7 +437,28 @@ var ToolkitPlugin = class extends import_obsidian.Plugin {
     });
   }
 };
-var ToolkitPluginSettingTab = class extends import_obsidian.PluginSettingTab {
+var MermaidModal = class extends import_obsidian.Modal {
+  constructor(app, svg) {
+    super(app);
+    this.svg = svg;
+  }
+  onOpen() {
+    const { contentEl } = this;
+    this.titleEl.setText("Mermaid Diagram Viewer");
+    contentEl.addClass("toolkit-mermaid-modal-content");
+    this.svg.style.transform = "none";
+    this.svg.style.maxWidth = "none";
+    this.svg.style.width = "auto";
+    this.svg.style.height = "auto";
+    const container = contentEl.createEl("div", { cls: "toolkit-mermaid-modal-container" });
+    container.appendChild(this.svg);
+  }
+  onClose() {
+    const { contentEl } = this;
+    contentEl.empty();
+  }
+};
+var ToolkitSettingTab = class extends import_obsidian.PluginSettingTab {
   constructor(app, plugin) {
     super(app, plugin);
     this.plugin = plugin;
@@ -417,6 +498,11 @@ var ToolkitPluginSettingTab = class extends import_obsidian.PluginSettingTab {
     new import_obsidian.Setting(containerEl).setName("Default Ribbon Fold Level").setDesc("Determines which heading level the ribbon icon should fold.").addSlider((slider) => slider.setLimits(1, 6, 1).setValue(this.plugin.settings.defaultFoldLevel).setDynamicTooltip().onChange((value) => __async(this, null, function* () {
       this.plugin.settings.defaultFoldLevel = value;
       yield this.plugin.saveSettings();
+    })));
+    new import_obsidian.Setting(containerEl).setName("Scale Mermaid Diagrams").setDesc("Conform Mermaid diagrams to the note width (prevents them from being too large).").addToggle((toggle) => toggle.setValue(this.plugin.settings.scaleMermaid).onChange((value) => __async(this, null, function* () {
+      this.plugin.settings.scaleMermaid = value;
+      yield this.plugin.saveSettings();
+      this.plugin.refreshMermaidScaling();
     })));
   }
 };

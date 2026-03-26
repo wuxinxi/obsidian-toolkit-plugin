@@ -65,3 +65,103 @@ body.is-drag-locked .nav-folder-title {
     color: var(--text-muted);
     display: block !important;
 }
+
+/* Mermaid Diagram Scaling */
+body.toolkit-scale-mermaid .mermaid, 
+body.toolkit-scale-mermaid .mermaid svg {
+    max-width: 100% !important;
+    height: auto !important;
+}
+
+body.toolkit-scale-mermaid .mermaid {
+    display: flex;
+    justify-content: center;
+    position: relative !important;
+}
+
+/* Zoom Controls Styling */
+.toolkit-zoom-controls {
+    display: none !important;
+    position: absolute !important;
+    right: 8px !important;
+    top: 8px !important;
+    align-items: center;
+    justify-content: center;
+    gap: 6px;
+    z-index: 50;
+    padding: 4px !important;
+    background-color: var(--background-primary-alt);
+    border: 1px solid var(--background-modifier-border);
+    border-radius: 6px;
+    box-shadow: 0 2px 8px rgba(0, 0, 0, 0.1);
+}
+
+.mermaid:hover .toolkit-zoom-controls {
+    display: flex !important;
+}
+
+.toolkit-zoom-icon {
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    width: 24px !important;
+    height: 24px !important;
+    border-radius: 4px;
+    cursor: pointer;
+    transition: background-color 0.2s;
+}
+
+.toolkit-zoom-icon:hover {
+    background-color: var(--background-modifier-hover);
+}
+
+.toolkit-zoom-icon svg {
+    width: 16px !important;
+    height: 16px !important;
+    color: var(--text-muted);
+}
+
+.mermaid svg {
+    transition: transform 0.2s ease-out;
+}
+
+/* Mermaid Modal Styling - Enhanced for Large View */
+.modal:has(.toolkit-mermaid-modal-content) {
+    width: 90vw !important;
+    max-width: 1200px !important; /* Cap it but allow wide view */
+    height: 85vh !important;
+    max-height: none !important;
+}
+
+@media screen and (max-width: 768px) {
+    .modal:has(.toolkit-mermaid-modal-content) {
+        width: 100vw !important;
+        height: 100vh !important;
+    }
+}
+
+.toolkit-mermaid-modal-content {
+    display: flex !important;
+    flex-direction: column;
+    padding: 0 !important;
+    height: 100%;
+    overflow: hidden;
+}
+
+.toolkit-mermaid-modal-container {
+    flex: 1;
+    overflow: auto;
+    display: flex;
+    justify-content: center;
+    align-items: flex-start;
+    padding: 40px;
+    background-color: var(--background-primary);
+}
+
+.toolkit-mermaid-modal-container svg {
+    max-width: 100% !important; /* Allow it to fit but... */
+    min-width: 600px; /* ...prevent it from being tiny */
+    width: auto !important;
+    height: auto !important;
+    transform: none !important;
+}

@@ -1,4 +1,16 @@
-import { App, Plugin, PluginSettingTab, Setting, Notice, TFolder, TFile, setIcon, MarkdownView } from 'obsidian';
+import {
+	App,
+	Editor,
+	MarkdownView,
+	Modal,
+	Notice,
+	Plugin,
+	PluginSettingTab,
+	Setting,
+	TFolder,
+	TFile,
+	setIcon
+} from 'obsidian';
 
 interface ToolkitPluginSettings {
 	isHidden: boolean;
@@ -7,6 +19,7 @@ interface ToolkitPluginSettings {
 	showQuickCreateFolderButton: boolean;
 	lockDragAndDrop: boolean;
 	defaultFoldLevel: number;
+	scaleMermaid: boolean;
 }
 
 const DEFAULT_SETTINGS: ToolkitPluginSettings = {
@@ -15,7 +28,8 @@ const DEFAULT_SETTINGS: ToolkitPluginSettings = {
 	showQuickCreateButton: true,
 	showQuickCreateFolderButton: true,
 	lockDragAndDrop: false,
-	defaultFoldLevel: 1
+	defaultFoldLevel: 1,
+	scaleMermaid: true
 }
 
 export default class ToolkitPlugin extends Plugin {
@@ -49,8 +63,10 @@ export default class ToolkitPlugin extends Plugin {
 			}
 		);
 
-		// Apply initial drag lock state
+		// Apply initial states
 		this.refreshDragLock();
+		this.refreshVisibility();
+		this.refreshMermaidScaling();
 
 		// Add Command Palette items
 		this.addCommand({
@@ -114,7 +130,7 @@ export default class ToolkitPlugin extends Plugin {
 		}, true);
 
 		// Add Settings Tab
-		this.addSettingTab(new ToolkitPluginSettingTab(this.app, this));
+		this.addSettingTab(new ToolkitSettingTab(this.app, this));
 
 		// Apply initial CSS state
 		this.refreshVisibility();
@@ -124,12 +140,12 @@ export default class ToolkitPlugin extends Plugin {
 			if (!this.settings.autoOpenWolaiFolders) return;
 
 			const target = evt.target as HTMLElement;
-			
+
 			// Ignore if clicking the action icons (handled locally on the element)
 			if (target.closest('.toolkit-icons-container') || target.closest('.toolkit-action-icon')) return;
 
 			// If clicking the collapse arrow, don't trigger auto-open
-			if (target.classList.contains('nav-folder-collapse-indicator') || 
+			if (target.classList.contains('nav-folder-collapse-indicator') ||
 				target.closest('.nav-folder-collapse-indicator')) {
 				return;
 			}
@@ -148,6 +164,9 @@ export default class ToolkitPlugin extends Plugin {
 
 		// Periodically check and inject buttons
 		this.registerInterval(window.setInterval(() => this.injectCreateButtons(), 1000));
+
+		// Periodically check and inject Mermaid zoom controls
+		this.registerInterval(window.setInterval(() => this.injectMermaidZoomControls(), 1000));
 
 		// Add Editor Menu (Right-click) integration
 		this.registerEvent(
@@ -268,7 +287,7 @@ export default class ToolkitPlugin extends Plugin {
 			let newFolderName = "未命名";
 			let counter = 1;
 			let newFolderPath = `${path}/${newFolderName}`;
-			
+
 			while (this.app.vault.getAbstractFileByPath(newFolderPath)) {
 				newFolderName = `未命名 ${counter}`;
 				newFolderPath = `${path}/${newFolderName}`;
@@ -310,6 +329,67 @@ export default class ToolkitPlugin extends Plugin {
 		}
 	}
 
+	injectMermaidZoomControls() {
+		if (!this.settings.scaleMermaid) return;
+
+		const mermaidDivs = document.querySelectorAll('.mermaid:not(.has-toolkit-zoom)');
+		mermaidDivs.forEach(el => {
+			const mermaidEl = el as HTMLElement;
+			mermaidEl.addClass('has-toolkit-zoom');
+
+			const controls = mermaidEl.createEl('div', { cls: 'toolkit-zoom-controls' });
+
+			const zoomOut = controls.createEl('div', { cls: 'toolkit-zoom-icon', attr: { 'aria-label': 'Zoom Out' } });
+			setIcon(zoomOut, 'minus');
+			zoomOut.onClickEvent(() => this.updateMermaidZoom(mermaidEl, -0.1));
+
+			const reset = controls.createEl('div', { cls: 'toolkit-zoom-icon', attr: { 'aria-label': 'Reset Zoom' } });
+			setIcon(reset, 'refresh-ccw');
+			reset.onClickEvent(() => this.updateMermaidZoom(mermaidEl, 0, true));
+
+			const zoomIn = controls.createEl('div', { cls: 'toolkit-zoom-icon', attr: { 'aria-label': 'Zoom In' } });
+			setIcon(zoomIn, 'plus');
+			zoomIn.onClickEvent(() => this.updateMermaidZoom(mermaidEl, 0.1));
+
+			const expand = controls.createEl('div', { cls: 'toolkit-zoom-icon', attr: { 'aria-label': 'Fullscreen' } });
+			setIcon(expand, 'maximize');
+			expand.onClickEvent(() => {
+				const svg = mermaidEl.querySelector('svg');
+				if (svg) {
+					new MermaidModal(this.app, svg.cloneNode(true) as SVGElement).open();
+				}
+			});
+
+			// Reset on leave as requested ("离开就恢复")
+			mermaidEl.addEventListener('mouseleave', () => {
+				this.updateMermaidZoom(mermaidEl, 0, true);
+			});
+		});
+	}
+
+	updateMermaidZoom(el: HTMLElement, delta: number, reset = false) {
+		const svg = el.querySelector('svg');
+		if (!svg) return;
+
+		let currentScale = parseFloat(el.getAttr('data-zoom') || '1.0');
+		if (reset) {
+			currentScale = 1.0;
+		} else {
+			currentScale = Math.max(0.1, Math.min(5.0, currentScale + delta));
+		}
+
+		el.setAttr('data-zoom', currentScale.toString());
+		svg.style.transform = `scale(${currentScale})`;
+		svg.style.transformOrigin = 'top center';
+
+		// If zoomed in, allow overflow and scrolling
+		if (currentScale > 1.0) {
+			el.style.overflowX = 'auto';
+		} else {
+			el.style.overflowX = 'hidden';
+		}
+	}
+
 	async handleFolderClick(folder: TFolder) {
 		// Filter out 'image' folders and non-md files
 		const children = folder.children.filter(child => {
@@ -344,10 +424,10 @@ export default class ToolkitPlugin extends Plugin {
 
 		const cursor = editor.getCursor();
 		let found = false;
-		
-		// Unfold everything first to ensure a consistent state? 
+
+		// Unfold everything first to ensure a consistent state?
 		// Actually, let's just try to fold.
-		
+
 		for (const heading of cache.headings) {
 			if (heading.level === level) {
 				const line = heading.position.start.line;
@@ -366,7 +446,7 @@ export default class ToolkitPlugin extends Plugin {
 		this.settings.lockDragAndDrop = !this.settings.lockDragAndDrop;
 		await this.saveSettings();
 		this.refreshDragLock();
-		
+
 		const status = this.settings.lockDragAndDrop ? 'Locked' : 'Unlocked';
 		new Notice(`File drag-and-drop is now ${status}`);
 	}
@@ -389,7 +469,7 @@ export default class ToolkitPlugin extends Plugin {
 		this.settings.isHidden = !this.settings.isHidden;
 		await this.saveSettings();
 		this.refreshVisibility();
-		
+
 		const status = this.settings.isHidden ? 'Hidden' : 'Visible';
 		new Notice(`Image folders are now ${status}`);
 	}
@@ -402,8 +482,16 @@ export default class ToolkitPlugin extends Plugin {
 		}
 	}
 
+	refreshMermaidScaling() {
+		if (this.settings.scaleMermaid) {
+			document.body.classList.add('toolkit-scale-mermaid');
+		} else {
+			document.body.classList.remove('toolkit-scale-mermaid');
+		}
+	}
+
 	onunload() {
-		document.body.classList.remove('hide-image-folder', 'is-drag-locked');
+		document.body.classList.remove('hide-image-folder', 'is-drag-locked', 'toolkit-scale-mermaid');
 		// Remove all injected buttons and classes
 		document.querySelectorAll('.toolkit-icons-container').forEach(el => el.remove());
 		document.querySelectorAll('.has-toolkit-icons').forEach(el => el.classList.remove('has-toolkit-icons'));
@@ -418,7 +506,34 @@ export default class ToolkitPlugin extends Plugin {
 	}
 }
 
-class ToolkitPluginSettingTab extends PluginSettingTab {
+class MermaidModal extends Modal {
+	constructor(app: App, private svg: SVGElement) {
+		super(app);
+	}
+
+	onOpen() {
+		const { contentEl } = this;
+		this.titleEl.setText('Mermaid Diagram Viewer');
+
+		contentEl.addClass('toolkit-mermaid-modal-content');
+
+		// Remove scaling styles from clone
+		this.svg.style.transform = 'none';
+		this.svg.style.maxWidth = 'none';
+		this.svg.style.width = 'auto';
+		this.svg.style.height = 'auto';
+
+		const container = contentEl.createEl('div', { cls: 'toolkit-mermaid-modal-container' });
+		container.appendChild(this.svg);
+	}
+
+	onClose() {
+		const { contentEl } = this;
+		contentEl.empty();
+	}
+}
+
+class ToolkitSettingTab extends PluginSettingTab {
 	plugin: ToolkitPlugin;
 
 	constructor(app: App, plugin: ToolkitPlugin) {
@@ -505,6 +620,17 @@ class ToolkitPluginSettingTab extends PluginSettingTab {
 				.onChange(async (value) => {
 					this.plugin.settings.defaultFoldLevel = value;
 					await this.plugin.saveSettings();
+				}));
+
+		new Setting(containerEl)
+			.setName('Scale Mermaid Diagrams')
+			.setDesc('Conform Mermaid diagrams to the note width (prevents them from being too large).')
+			.addToggle(toggle => toggle
+				.setValue(this.plugin.settings.scaleMermaid)
+				.onChange(async (value) => {
+					this.plugin.settings.scaleMermaid = value;
+					await this.plugin.saveSettings();
+					this.plugin.refreshMermaidScaling();
 				}));
 	}
 }
