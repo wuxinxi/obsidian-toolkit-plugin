@@ -412,37 +412,75 @@ export default class ToolkitPlugin extends Plugin {
 
 	foldHeadingsByLevel(level: number) {
 		const view = this.app.workspace.getActiveViewOfType(MarkdownView);
-		if (!view) {
+		if (!view) return;
+
+		// Handle Preview Mode (Reading Mode)
+		if (view.getMode() === 'preview') {
+			this.foldPreviewHeadings(view, level);
 			return;
 		}
 
+		// Handle Edit Mode (Live Preview / Source Mode)
 		const editor = view.editor;
 		const file = view.file;
 		if (!file) return;
 
 		const cache = this.app.metadataCache.getFileCache(file);
-		if (!cache || !cache.headings) {
-			return;
-		}
+		if (!cache || !cache.headings) return;
 
 		const cursor = editor.getCursor();
-		let found = false;
-
-		// Unfold everything first to ensure a consistent state?
-		// Actually, let's just try to fold.
-
+		
+		// For Edit Mode, we iterate through headings and use setFold if available, 
+		// or use the command but with cursor management.
 		for (const heading of cache.headings) {
 			if (heading.level === level) {
 				const line = heading.position.start.line;
-				editor.setCursor(line, 0);
-				// 'editor:toggle-fold' will fold if expanded, and unfold if collapsed
-				(this.app as any).commands.executeCommandById('editor:toggle-fold');
-				found = true;
+				
+				// Using internal setFold is more reliable than toggle-fold command
+				// because it ensures the state is 'folded' regardless of current state.
+				if ((editor as any).setFold) {
+					(editor as any).setFold(line, true);
+				} else {
+					// Fallback: only toggle if we have to, but try to avoid "unfolding" 
+					// unfortunately there's no public "isFolded" in CM6 easily.
+					// But usually setFold is available in Obsidian's editor.
+					editor.setCursor(line, 0);
+					(this.app as any).commands.executeCommandById('editor:toggle-fold');
+				}
 			}
 		}
 
 		// Restore original cursor position
 		editor.setCursor(cursor);
+	}
+
+	private foldPreviewHeadings(view: MarkdownView, level: number) {
+		const previewView = (view as any).previewMode;
+		if (!previewView || !previewView.containerEl) return;
+
+		const container = previewView.containerEl as HTMLElement;
+		// Obsidian Reading mode headings have a specific structure.
+		// Collapsible headings usually have a .heading-collapse-indicator
+		const selector = `h${level}`;
+		const headings = container.querySelectorAll(selector);
+
+		headings.forEach((el: Element) => {
+			const heading = el as HTMLElement;
+			// Find the collapse indicator. It might be a sibling or a child depending on version.
+			// Usually it's a child of the heading element in newer versions or nearby.
+			const indicator = heading.querySelector('.heading-collapse-indicator') as HTMLElement;
+			
+			if (indicator) {
+				// Check if it's already collapsed. 
+				// Collapsed headings usually have a class 'is-collapsed' on the indicator or the heading itself's parent.
+				const isCollapsed = indicator.parentElement?.classList.contains('is-collapsed') || 
+								   heading.classList.contains('is-collapsed');
+				
+				if (!isCollapsed) {
+					indicator.click();
+				}
+			}
+		});
 	}
 
 	async toggleDragLock() {

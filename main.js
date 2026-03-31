@@ -462,7 +462,10 @@ var ToolkitPlugin = class extends import_obsidian2.Plugin {
   }
   foldHeadingsByLevel(level) {
     const view = this.app.workspace.getActiveViewOfType(import_obsidian2.MarkdownView);
-    if (!view) {
+    if (!view)
+      return;
+    if (view.getMode() === "preview") {
+      this.foldPreviewHeadings(view, level);
       return;
     }
     const editor = view.editor;
@@ -470,20 +473,40 @@ var ToolkitPlugin = class extends import_obsidian2.Plugin {
     if (!file)
       return;
     const cache = this.app.metadataCache.getFileCache(file);
-    if (!cache || !cache.headings) {
+    if (!cache || !cache.headings)
       return;
-    }
     const cursor = editor.getCursor();
-    let found = false;
     for (const heading of cache.headings) {
       if (heading.level === level) {
         const line = heading.position.start.line;
-        editor.setCursor(line, 0);
-        this.app.commands.executeCommandById("editor:toggle-fold");
-        found = true;
+        if (editor.setFold) {
+          editor.setFold(line, true);
+        } else {
+          editor.setCursor(line, 0);
+          this.app.commands.executeCommandById("editor:toggle-fold");
+        }
       }
     }
     editor.setCursor(cursor);
+  }
+  foldPreviewHeadings(view, level) {
+    const previewView = view.previewMode;
+    if (!previewView || !previewView.containerEl)
+      return;
+    const container = previewView.containerEl;
+    const selector = `h${level}`;
+    const headings = container.querySelectorAll(selector);
+    headings.forEach((el) => {
+      var _a;
+      const heading = el;
+      const indicator = heading.querySelector(".heading-collapse-indicator");
+      if (indicator) {
+        const isCollapsed = ((_a = indicator.parentElement) == null ? void 0 : _a.classList.contains("is-collapsed")) || heading.classList.contains("is-collapsed");
+        if (!isCollapsed) {
+          indicator.click();
+        }
+      }
+    });
   }
   toggleDragLock() {
     return __async(this, null, function* () {
