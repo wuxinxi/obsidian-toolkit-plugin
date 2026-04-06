@@ -6,8 +6,6 @@ export default {
     QUICK_CREATE_FOLDER_DESC: 'Add an icon to foldrs for creating subfolders quickly.',
     LOCK_DRAG_NAME: 'Lock File Drag and Drop',
     LOCK_DRAG_DESC: 'Prevent accidental file/folder movements in the file explorer.',
-    FOLDING_LEVEL_NAME: 'Default Folding Level',
-    FOLDING_LEVEL_DESC: 'The heading level to target when using the "Fold All" ribbon button.',
     SCALE_MERMAID_NAME: 'Enable Mermaid Scaling & Zoom',
     SCALE_MERMAID_DESC: 'Automatically scale Mermaid diagrams to fit note width and enable hover zoom/fullscreen.',
     MERMAID_SENSITIVITY_NAME: 'Mermaid Zoom Sensitivity',
@@ -18,14 +16,8 @@ export default {
     QUICK_CREATE_NOTE_DESC: "Show a '+' icon on folders to quickly create a new note.",
 
     // Commands & Ribbon
-    COMMAND_FOLD_H1: 'Fold All H1 Headings',
-    COMMAND_FOLD_H2: 'Fold All H2 Headings',
-    COMMAND_FOLD_H3: 'Fold All H3 Headings',
-    COMMAND_FOLD_ALL: 'Collapse All Headings (Native)',
     COMMAND_TOGGLE_DRAG: 'Toggle File Explorer Drag-and-Drop Lock',
     COMMAND_TOGGLE_IMAGES: 'Toggle Image Folder Visibility',
-    RIBBON_FOLD: 'One-click Folding',
-    RIBBON_FOLD_H1: 'Fold All H1 Headings',
     RIBBON_TOGGLE_IMAGES: 'Toggle Image Folders',
     RIBBON_TOGGLE_DRAG: 'Toggle Drag-and-Drop Lock',
 
@@ -46,5 +38,4 @@ export default {
     NOTICE_IMAGES_HIDDEN: 'Image folders are now Hidden',
     NOTICE_IMAGES_VISIBLE: 'Image folders are now Visible',
     NOTICE_DRAG_LOCKED_WARN: 'File drag-and-drop is locked by ToolkitPlugin.',
-    NOTICE_NO_FOLD_FUNC: 'ToolkitPlugin: No folding function found on editor',
 };

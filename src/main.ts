@@ -19,7 +19,6 @@ interface ToolkitPluginSettings {
 	showQuickCreateButton: boolean;
 	showQuickCreateFolderButton: boolean;
 	lockDragAndDrop: boolean;
-	defaultFoldLevel: number;
 	scaleMermaid: boolean;
 	mermaidZoomSensitivity: number;
 }
@@ -30,7 +29,6 @@ const DEFAULT_SETTINGS: ToolkitPluginSettings = {
 	showQuickCreateButton: true,
 	showQuickCreateFolderButton: true,
 	lockDragAndDrop: false,
-	defaultFoldLevel: 1,
 	scaleMermaid: true,
 	mermaidZoomSensitivity: 1.0
 }
@@ -38,7 +36,6 @@ const DEFAULT_SETTINGS: ToolkitPluginSettings = {
 export default class ToolkitPlugin extends Plugin {
 	settings: ToolkitPluginSettings = DEFAULT_SETTINGS;
 	private lockRibbonEl: HTMLElement | null = null;
-	private foldRibbonEl: HTMLElement | null = null;
 
 	async onload() {
 		await this.loadSettings();
@@ -57,14 +54,6 @@ export default class ToolkitPlugin extends Plugin {
 			}
 		);
 
-		// Add Ribbon Icon for One-Click Folding
-		this.foldRibbonEl = this.addRibbonIcon(
-			'chevrons-down-up',
-			t('RIBBON_FOLD_H1'),
-			(evt: MouseEvent) => {
-				this.foldHeadingsByLevel(this.settings.defaultFoldLevel);
-			}
-		);
 
 		// Apply initial states
 		this.refreshDragLock();
@@ -88,37 +77,6 @@ export default class ToolkitPlugin extends Plugin {
 			}
 		});
 
-		this.addCommand({
-			id: 'fold-all-h1',
-			name: t('COMMAND_FOLD_H1'),
-			callback: () => {
-				this.foldHeadingsByLevel(1);
-			}
-		});
-
-		this.addCommand({
-			id: 'fold-all-h2',
-			name: t('COMMAND_FOLD_H2'),
-			callback: () => {
-				this.foldHeadingsByLevel(2);
-			}
-		});
-
-		this.addCommand({
-			id: 'fold-all-h3',
-			name: t('COMMAND_FOLD_H3'),
-			callback: () => {
-				this.foldHeadingsByLevel(3);
-			}
-		});
-
-		this.addCommand({
-			id: 'collapse-all-headings',
-			name: t('COMMAND_FOLD_ALL'),
-			callback: () => {
-				(this.app as any).commands.executeCommandById('editor:fold-all');
-			}
-		});
 
 		// Intercept dragstart events to prevent accidental moves
 		this.registerDomEvent(document, 'dragstart', (evt: DragEvent) => {
@@ -171,19 +129,6 @@ export default class ToolkitPlugin extends Plugin {
 		// Periodically check and inject Mermaid zoom controls
 		this.registerInterval(window.setInterval(() => this.injectMermaidZoomControls(), 1000));
 
-		// Add Editor Menu (Right-click) integration
-		this.registerEvent(
-			this.app.workspace.on('editor-menu', (menu, editor, view) => {
-				menu.addItem((item) => {
-					item
-						.setTitle(t('COMMAND_FOLD_H1'))
-						.setIcon('chevrons-down-up')
-						.onClick(() => {
-							this.foldHeadingsByLevel(1);
-						});
-				});
-			})
-		);
 	}
 
 	injectCreateButtons() {
@@ -410,78 +355,6 @@ export default class ToolkitPlugin extends Plugin {
 		}
 	}
 
-	foldHeadingsByLevel(level: number) {
-		const view = this.app.workspace.getActiveViewOfType(MarkdownView);
-		if (!view) return;
-
-		// Handle Preview Mode (Reading Mode)
-		if (view.getMode() === 'preview') {
-			this.foldPreviewHeadings(view, level);
-			return;
-		}
-
-		// Handle Edit Mode (Live Preview / Source Mode)
-		const editor = view.editor;
-		const file = view.file;
-		if (!file) return;
-
-		const cache = this.app.metadataCache.getFileCache(file);
-		if (!cache || !cache.headings) return;
-
-		const cursor = editor.getCursor();
-		
-		// For Edit Mode, we iterate through headings and use setFold if available, 
-		// or use the command but with cursor management.
-		for (const heading of cache.headings) {
-			if (heading.level === level) {
-				const line = heading.position.start.line;
-				
-				// Using internal setFold is more reliable than toggle-fold command
-				// because it ensures the state is 'folded' regardless of current state.
-				if ((editor as any).setFold) {
-					(editor as any).setFold(line, true);
-				} else {
-					// Fallback: only toggle if we have to, but try to avoid "unfolding" 
-					// unfortunately there's no public "isFolded" in CM6 easily.
-					// But usually setFold is available in Obsidian's editor.
-					editor.setCursor(line, 0);
-					(this.app as any).commands.executeCommandById('editor:toggle-fold');
-				}
-			}
-		}
-
-		// Restore original cursor position
-		editor.setCursor(cursor);
-	}
-
-	private foldPreviewHeadings(view: MarkdownView, level: number) {
-		const previewView = (view as any).previewMode;
-		if (!previewView || !previewView.containerEl) return;
-
-		const container = previewView.containerEl as HTMLElement;
-		// Obsidian Reading mode headings have a specific structure.
-		// Collapsible headings usually have a .heading-collapse-indicator
-		const selector = `h${level}`;
-		const headings = container.querySelectorAll(selector);
-
-		headings.forEach((el: Element) => {
-			const heading = el as HTMLElement;
-			// Find the collapse indicator. It might be a sibling or a child depending on version.
-			// Usually it's a child of the heading element in newer versions or nearby.
-			const indicator = heading.querySelector('.heading-collapse-indicator') as HTMLElement;
-			
-			if (indicator) {
-				// Check if it's already collapsed. 
-				// Collapsed headings usually have a class 'is-collapsed' on the indicator or the heading itself's parent.
-				const isCollapsed = indicator.parentElement?.classList.contains('is-collapsed') || 
-								   heading.classList.contains('is-collapsed');
-				
-				if (!isCollapsed) {
-					indicator.click();
-				}
-			}
-		});
-	}
 
 	async toggleDragLock() {
 		this.settings.lockDragAndDrop = !this.settings.lockDragAndDrop;
@@ -710,17 +583,6 @@ class ToolkitSettingTab extends PluginSettingTab {
 					this.plugin.refreshDragLock();
 				}));
 
-		new Setting(containerEl)
-			.setName(t('FOLDING_LEVEL_NAME'))
-			.setDesc(t('FOLDING_LEVEL_DESC'))
-			.addSlider(slider => slider
-				.setLimits(1, 6, 1)
-				.setValue(this.plugin.settings.defaultFoldLevel)
-				.setDynamicTooltip()
-				.onChange(async (value) => {
-					this.plugin.settings.defaultFoldLevel = value;
-					await this.plugin.saveSettings();
-				}));
 
 		new Setting(containerEl)
 			.setName(t('SCALE_MERMAID_NAME'))

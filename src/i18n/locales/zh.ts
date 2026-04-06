@@ -6,8 +6,6 @@ export default {
     QUICK_CREATE_FOLDER_DESC: '在文件夹旁添加图标，以便快速创建子文件夹。',
     LOCK_DRAG_NAME: '锁定文件拖拽',
     LOCK_DRAG_DESC: '防止在文件列表里误操作移动文件或文件夹。',
-    FOLDING_LEVEL_NAME: '默认折叠层级',
-    FOLDING_LEVEL_DESC: '点击侧边栏“一键折叠”按钮时目标标题层级。',
     SCALE_MERMAID_NAME: '启用 Mermaid 缩放与全屏',
     SCALE_MERMAID_DESC: '自动让 Mermaid 图表适配笔记宽度，并启用悬停缩放与全屏查看。',
     MERMAID_SENSITIVITY_NAME: 'Mermaid 缩放灵敏度',
@@ -18,14 +16,8 @@ export default {
     QUICK_CREATE_NOTE_DESC: '在文件夹旁显示 "+" 图标，以便快速创建新笔记。',
 
     // Commands & Ribbon
-    COMMAND_FOLD_H1: '全选折叠 H1 标题',
-    COMMAND_FOLD_H2: '全选折叠 H2 标题',
-    COMMAND_FOLD_H3: '全选折叠 H3 标题',
-    COMMAND_FOLD_ALL: '一键折叠所有标题 (系统原生)',
     COMMAND_TOGGLE_DRAG: '切换文件资源管理器拖拽锁定状态',
     COMMAND_TOGGLE_IMAGES: '切换图片文件夹显示状态',
-    RIBBON_FOLD: '一键标题折叠',
-    RIBBON_FOLD_H1: '折叠所有 H1 标题',
     RIBBON_TOGGLE_IMAGES: '切换图片文件夹显示',
     RIBBON_TOGGLE_DRAG: '切换拖拽锁定',
 
@@ -46,5 +38,4 @@ export default {
     NOTICE_IMAGES_HIDDEN: '图片文件夹已隐藏',
     NOTICE_IMAGES_VISIBLE: '图片文件夹已显示',
     NOTICE_DRAG_LOCKED_WARN: '文件拖拽已被 ToolkitPlugin 锁定。',
-    NOTICE_NO_FOLD_FUNC: 'ToolkitPlugin: 未在编辑器中找到折叠功能',
 };

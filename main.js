@@ -64,8 +64,6 @@ var en_default = {
   QUICK_CREATE_FOLDER_DESC: "Add an icon to foldrs for creating subfolders quickly.",
   LOCK_DRAG_NAME: "Lock File Drag and Drop",
   LOCK_DRAG_DESC: "Prevent accidental file/folder movements in the file explorer.",
-  FOLDING_LEVEL_NAME: "Default Folding Level",
-  FOLDING_LEVEL_DESC: 'The heading level to target when using the "Fold All" ribbon button.',
   SCALE_MERMAID_NAME: "Enable Mermaid Scaling & Zoom",
   SCALE_MERMAID_DESC: "Automatically scale Mermaid diagrams to fit note width and enable hover zoom/fullscreen.",
   MERMAID_SENSITIVITY_NAME: "Mermaid Zoom Sensitivity",
@@ -74,14 +72,8 @@ var en_default = {
   AUTO_OPEN_WOLAI_DESC: "When clicking a folder containing only one MD file with the same name, open the file automatically.",
   QUICK_CREATE_NOTE_NAME: "Show Quick Create Button",
   QUICK_CREATE_NOTE_DESC: "Show a '+' icon on folders to quickly create a new note.",
-  COMMAND_FOLD_H1: "Fold All H1 Headings",
-  COMMAND_FOLD_H2: "Fold All H2 Headings",
-  COMMAND_FOLD_H3: "Fold All H3 Headings",
-  COMMAND_FOLD_ALL: "Collapse All Headings (Native)",
   COMMAND_TOGGLE_DRAG: "Toggle File Explorer Drag-and-Drop Lock",
   COMMAND_TOGGLE_IMAGES: "Toggle Image Folder Visibility",
-  RIBBON_FOLD: "One-click Folding",
-  RIBBON_FOLD_H1: "Fold All H1 Headings",
   RIBBON_TOGGLE_IMAGES: "Toggle Image Folders",
   RIBBON_TOGGLE_DRAG: "Toggle Drag-and-Drop Lock",
   MERMAID_ZOOM_IN: "Zoom In",
@@ -95,8 +87,7 @@ var en_default = {
   NOTICE_DRAG_UNLOCKED: "File drag-and-drop is now Unlocked",
   NOTICE_IMAGES_HIDDEN: "Image folders are now Hidden",
   NOTICE_IMAGES_VISIBLE: "Image folders are now Visible",
-  NOTICE_DRAG_LOCKED_WARN: "File drag-and-drop is locked by ToolkitPlugin.",
-  NOTICE_NO_FOLD_FUNC: "ToolkitPlugin: No folding function found on editor"
+  NOTICE_DRAG_LOCKED_WARN: "File drag-and-drop is locked by ToolkitPlugin."
 };
 
 // src/i18n/locales/zh.ts
@@ -107,8 +98,6 @@ var zh_default = {
   QUICK_CREATE_FOLDER_DESC: "\u5728\u6587\u4EF6\u5939\u65C1\u6DFB\u52A0\u56FE\u6807\uFF0C\u4EE5\u4FBF\u5FEB\u901F\u521B\u5EFA\u5B50\u6587\u4EF6\u5939\u3002",
   LOCK_DRAG_NAME: "\u9501\u5B9A\u6587\u4EF6\u62D6\u62FD",
   LOCK_DRAG_DESC: "\u9632\u6B62\u5728\u6587\u4EF6\u5217\u8868\u91CC\u8BEF\u64CD\u4F5C\u79FB\u52A8\u6587\u4EF6\u6216\u6587\u4EF6\u5939\u3002",
-  FOLDING_LEVEL_NAME: "\u9ED8\u8BA4\u6298\u53E0\u5C42\u7EA7",
-  FOLDING_LEVEL_DESC: "\u70B9\u51FB\u4FA7\u8FB9\u680F\u201C\u4E00\u952E\u6298\u53E0\u201D\u6309\u94AE\u65F6\u76EE\u6807\u6807\u9898\u5C42\u7EA7\u3002",
   SCALE_MERMAID_NAME: "\u542F\u7528 Mermaid \u7F29\u653E\u4E0E\u5168\u5C4F",
   SCALE_MERMAID_DESC: "\u81EA\u52A8\u8BA9 Mermaid \u56FE\u8868\u9002\u914D\u7B14\u8BB0\u5BBD\u5EA6\uFF0C\u5E76\u542F\u7528\u60AC\u505C\u7F29\u653E\u4E0E\u5168\u5C4F\u67E5\u770B\u3002",
   MERMAID_SENSITIVITY_NAME: "Mermaid \u7F29\u653E\u7075\u654F\u5EA6",
@@ -117,14 +106,8 @@ var zh_default = {
   AUTO_OPEN_WOLAI_DESC: "\u70B9\u51FB\u4EC5\u5305\u542B\u4E00\u4E2A\u540C\u540D MD \u6587\u4EF6\u7684\u6587\u4EF6\u5939\u65F6\uFF0C\u81EA\u52A8\u6253\u5F00\u8BE5\u6587\u4EF6\u3002",
   QUICK_CREATE_NOTE_NAME: "\u663E\u793A\u5FEB\u901F\u65B0\u5EFA\u7B14\u8BB0\u6309\u94AE",
   QUICK_CREATE_NOTE_DESC: '\u5728\u6587\u4EF6\u5939\u65C1\u663E\u793A "+" \u56FE\u6807\uFF0C\u4EE5\u4FBF\u5FEB\u901F\u521B\u5EFA\u65B0\u7B14\u8BB0\u3002',
-  COMMAND_FOLD_H1: "\u5168\u9009\u6298\u53E0 H1 \u6807\u9898",
-  COMMAND_FOLD_H2: "\u5168\u9009\u6298\u53E0 H2 \u6807\u9898",
-  COMMAND_FOLD_H3: "\u5168\u9009\u6298\u53E0 H3 \u6807\u9898",
-  COMMAND_FOLD_ALL: "\u4E00\u952E\u6298\u53E0\u6240\u6709\u6807\u9898 (\u7CFB\u7EDF\u539F\u751F)",
   COMMAND_TOGGLE_DRAG: "\u5207\u6362\u6587\u4EF6\u8D44\u6E90\u7BA1\u7406\u5668\u62D6\u62FD\u9501\u5B9A\u72B6\u6001",
   COMMAND_TOGGLE_IMAGES: "\u5207\u6362\u56FE\u7247\u6587\u4EF6\u5939\u663E\u793A\u72B6\u6001",
-  RIBBON_FOLD: "\u4E00\u952E\u6807\u9898\u6298\u53E0",
-  RIBBON_FOLD_H1: "\u6298\u53E0\u6240\u6709 H1 \u6807\u9898",
   RIBBON_TOGGLE_IMAGES: "\u5207\u6362\u56FE\u7247\u6587\u4EF6\u5939\u663E\u793A",
   RIBBON_TOGGLE_DRAG: "\u5207\u6362\u62D6\u62FD\u9501\u5B9A",
   MERMAID_ZOOM_IN: "\u653E\u5927",
@@ -138,8 +121,7 @@ var zh_default = {
   NOTICE_DRAG_UNLOCKED: "\u6587\u4EF6\u62D6\u62FD\u529F\u80FD\u5DF2\u89E3\u9501",
   NOTICE_IMAGES_HIDDEN: "\u56FE\u7247\u6587\u4EF6\u5939\u5DF2\u9690\u85CF",
   NOTICE_IMAGES_VISIBLE: "\u56FE\u7247\u6587\u4EF6\u5939\u5DF2\u663E\u793A",
-  NOTICE_DRAG_LOCKED_WARN: "\u6587\u4EF6\u62D6\u62FD\u5DF2\u88AB ToolkitPlugin \u9501\u5B9A\u3002",
-  NOTICE_NO_FOLD_FUNC: "ToolkitPlugin: \u672A\u5728\u7F16\u8F91\u5668\u4E2D\u627E\u5230\u6298\u53E0\u529F\u80FD"
+  NOTICE_DRAG_LOCKED_WARN: "\u6587\u4EF6\u62D6\u62FD\u5DF2\u88AB ToolkitPlugin \u9501\u5B9A\u3002"
 };
 
 // src/i18n/index.ts
@@ -163,7 +145,6 @@ var DEFAULT_SETTINGS = {
   showQuickCreateButton: true,
   showQuickCreateFolderButton: true,
   lockDragAndDrop: false,
-  defaultFoldLevel: 1,
   scaleMermaid: true,
   mermaidZoomSensitivity: 1
 };
@@ -172,7 +153,6 @@ var ToolkitPlugin = class extends import_obsidian2.Plugin {
     super(...arguments);
     this.settings = DEFAULT_SETTINGS;
     this.lockRibbonEl = null;
-    this.foldRibbonEl = null;
   }
   onload() {
     return __async(this, null, function* () {
@@ -182,9 +162,6 @@ var ToolkitPlugin = class extends import_obsidian2.Plugin {
       });
       this.lockRibbonEl = this.addRibbonIcon(this.settings.lockDragAndDrop ? "lock" : "unlock", t("RIBBON_TOGGLE_DRAG"), (evt) => {
         this.toggleDragLock();
-      });
-      this.foldRibbonEl = this.addRibbonIcon("chevrons-down-up", t("RIBBON_FOLD_H1"), (evt) => {
-        this.foldHeadingsByLevel(this.settings.defaultFoldLevel);
       });
       this.refreshDragLock();
       this.refreshVisibility();
@@ -201,34 +178,6 @@ var ToolkitPlugin = class extends import_obsidian2.Plugin {
         name: t("COMMAND_TOGGLE_DRAG"),
         callback: () => {
           this.toggleDragLock();
-        }
-      });
-      this.addCommand({
-        id: "fold-all-h1",
-        name: t("COMMAND_FOLD_H1"),
-        callback: () => {
-          this.foldHeadingsByLevel(1);
-        }
-      });
-      this.addCommand({
-        id: "fold-all-h2",
-        name: t("COMMAND_FOLD_H2"),
-        callback: () => {
-          this.foldHeadingsByLevel(2);
-        }
-      });
-      this.addCommand({
-        id: "fold-all-h3",
-        name: t("COMMAND_FOLD_H3"),
-        callback: () => {
-          this.foldHeadingsByLevel(3);
-        }
-      });
-      this.addCommand({
-        id: "collapse-all-headings",
-        name: t("COMMAND_FOLD_ALL"),
-        callback: () => {
-          this.app.commands.executeCommandById("editor:fold-all");
         }
       });
       this.registerDomEvent(document, "dragstart", (evt) => {
@@ -264,13 +213,6 @@ var ToolkitPlugin = class extends import_obsidian2.Plugin {
       });
       this.registerInterval(window.setInterval(() => this.injectCreateButtons(), 1e3));
       this.registerInterval(window.setInterval(() => this.injectMermaidZoomControls(), 1e3));
-      this.registerEvent(this.app.workspace.on("editor-menu", (menu, editor, view) => {
-        menu.addItem((item) => {
-          item.setTitle(t("COMMAND_FOLD_H1")).setIcon("chevrons-down-up").onClick(() => {
-            this.foldHeadingsByLevel(1);
-          });
-        });
-      }));
     });
   }
   injectCreateButtons() {
@@ -460,54 +402,6 @@ var ToolkitPlugin = class extends import_obsidian2.Plugin {
       }
     });
   }
-  foldHeadingsByLevel(level) {
-    const view = this.app.workspace.getActiveViewOfType(import_obsidian2.MarkdownView);
-    if (!view)
-      return;
-    if (view.getMode() === "preview") {
-      this.foldPreviewHeadings(view, level);
-      return;
-    }
-    const editor = view.editor;
-    const file = view.file;
-    if (!file)
-      return;
-    const cache = this.app.metadataCache.getFileCache(file);
-    if (!cache || !cache.headings)
-      return;
-    const cursor = editor.getCursor();
-    for (const heading of cache.headings) {
-      if (heading.level === level) {
-        const line = heading.position.start.line;
-        if (editor.setFold) {
-          editor.setFold(line, true);
-        } else {
-          editor.setCursor(line, 0);
-          this.app.commands.executeCommandById("editor:toggle-fold");
-        }
-      }
-    }
-    editor.setCursor(cursor);
-  }
-  foldPreviewHeadings(view, level) {
-    const previewView = view.previewMode;
-    if (!previewView || !previewView.containerEl)
-      return;
-    const container = previewView.containerEl;
-    const selector = `h${level}`;
-    const headings = container.querySelectorAll(selector);
-    headings.forEach((el) => {
-      var _a;
-      const heading = el;
-      const indicator = heading.querySelector(".heading-collapse-indicator");
-      if (indicator) {
-        const isCollapsed = ((_a = indicator.parentElement) == null ? void 0 : _a.classList.contains("is-collapsed")) || heading.classList.contains("is-collapsed");
-        if (!isCollapsed) {
-          indicator.click();
-        }
-      }
-    });
-  }
   toggleDragLock() {
     return __async(this, null, function* () {
       this.settings.lockDragAndDrop = !this.settings.lockDragAndDrop;
@@ -669,10 +563,6 @@ var ToolkitSettingTab = class extends import_obsidian2.PluginSettingTab {
       this.plugin.settings.lockDragAndDrop = value;
       yield this.plugin.saveSettings();
       this.plugin.refreshDragLock();
-    })));
-    new import_obsidian2.Setting(containerEl).setName(t("FOLDING_LEVEL_NAME")).setDesc(t("FOLDING_LEVEL_DESC")).addSlider((slider) => slider.setLimits(1, 6, 1).setValue(this.plugin.settings.defaultFoldLevel).setDynamicTooltip().onChange((value) => __async(this, null, function* () {
-      this.plugin.settings.defaultFoldLevel = value;
-      yield this.plugin.saveSettings();
     })));
     new import_obsidian2.Setting(containerEl).setName(t("SCALE_MERMAID_NAME")).setDesc(t("SCALE_MERMAID_DESC")).addToggle((toggle) => toggle.setValue(this.plugin.settings.scaleMermaid).onChange((value) => __async(this, null, function* () {
       this.plugin.settings.scaleMermaid = value;
