@@ -72,6 +72,8 @@ var en_default = {
   AUTO_OPEN_WOLAI_DESC: "When clicking a folder containing only one MD file with the same name, open the file automatically.",
   QUICK_CREATE_NOTE_NAME: "Show Quick Create Button",
   QUICK_CREATE_NOTE_DESC: "Show a '+' icon on folders to quickly create a new note.",
+  AUTO_DETECT_LANG_NAME: "Auto-detect Code Language",
+  AUTO_DETECT_LANG_DESC: "Automatically detect and fill language tags when pasting code into a blank code block.",
   COMMAND_TOGGLE_DRAG: "Toggle File Explorer Drag-and-Drop Lock",
   COMMAND_TOGGLE_IMAGES: "Toggle Image Folder Visibility",
   RIBBON_TOGGLE_IMAGES: "Toggle Image Folders",
@@ -106,6 +108,8 @@ var zh_default = {
   AUTO_OPEN_WOLAI_DESC: "\u70B9\u51FB\u4EC5\u5305\u542B\u4E00\u4E2A\u540C\u540D MD \u6587\u4EF6\u7684\u6587\u4EF6\u5939\u65F6\uFF0C\u81EA\u52A8\u6253\u5F00\u8BE5\u6587\u4EF6\u3002",
   QUICK_CREATE_NOTE_NAME: "\u663E\u793A\u5FEB\u901F\u65B0\u5EFA\u7B14\u8BB0\u6309\u94AE",
   QUICK_CREATE_NOTE_DESC: '\u5728\u6587\u4EF6\u5939\u65C1\u663E\u793A "+" \u56FE\u6807\uFF0C\u4EE5\u4FBF\u5FEB\u901F\u521B\u5EFA\u65B0\u7B14\u8BB0\u3002',
+  AUTO_DETECT_LANG_NAME: "\u81EA\u52A8\u8BC6\u522B\u4EE3\u7801\u8BED\u8A00",
+  AUTO_DETECT_LANG_DESC: "\u5411\u7A7A\u767D\u4EE3\u7801\u5757\u7C98\u8D34\u4EE3\u7801\u65F6\uFF0C\u81EA\u52A8\u8BC6\u522B\u5E76\u586B\u5145\u8BED\u8A00\u6807\u8BC6\u7B26\u3002",
   COMMAND_TOGGLE_DRAG: "\u5207\u6362\u6587\u4EF6\u8D44\u6E90\u7BA1\u7406\u5668\u62D6\u62FD\u9501\u5B9A\u72B6\u6001",
   COMMAND_TOGGLE_IMAGES: "\u5207\u6362\u56FE\u7247\u6587\u4EF6\u5939\u663E\u793A\u72B6\u6001",
   RIBBON_TOGGLE_IMAGES: "\u5207\u6362\u56FE\u7247\u6587\u4EF6\u5939\u663E\u793A",
@@ -145,6 +149,7 @@ var DEFAULT_SETTINGS = {
   showQuickCreateButton: true,
   showQuickCreateFolderButton: true,
   lockDragAndDrop: false,
+  autoDetectLanguage: true,
   scaleMermaid: true,
   mermaidZoomSensitivity: 1
 };
@@ -213,7 +218,75 @@ var ToolkitPlugin = class extends import_obsidian2.Plugin {
       });
       this.registerInterval(window.setInterval(() => this.injectCreateButtons(), 1e3));
       this.registerInterval(window.setInterval(() => this.injectMermaidZoomControls(), 1e3));
+      this.registerEvent(this.app.workspace.on("editor-paste", (evt, editor, view) => {
+        var _a;
+        if (!this.settings.autoDetectLanguage)
+          return;
+        const clipboardData = (_a = evt.clipboardData) == null ? void 0 : _a.getData("text/plain");
+        if (!clipboardData || clipboardData.length < 5)
+          return;
+        const cursor = editor.getCursor();
+        const lineContent = editor.getLine(cursor.line);
+        if (lineContent.trim() === "```") {
+          const lang = this.detectLanguage(clipboardData);
+          if (lang) {
+            editor.setLine(cursor.line, "```" + lang);
+          }
+          return;
+        }
+        if (cursor.line > 0) {
+          const prevLine = editor.getLine(cursor.line - 1);
+          if (prevLine.trim() === "```") {
+            const lang = this.detectLanguage(clipboardData);
+            if (lang) {
+              editor.setLine(cursor.line - 1, "```" + lang);
+            }
+          }
+        }
+      }));
     });
+  }
+  detectLanguage(text) {
+    const patterns = [
+      { lang: "python", regex: /\b(def|class|if|elif|else|for|while|try|except|with|finally)\b.*:\s*$/m },
+      { lang: "python", regex: /\bself\.\w+/ },
+      { lang: "python", regex: /^\s*#\s+/m },
+      { lang: "python", regex: /("""|''')[\s\S]*?\1/ },
+      { lang: "python", regex: /^\s*(import|from)\b/m },
+      { lang: "javascript", regex: /\b(const|let|var|function|async|await|console\.log|import|export|=>|process\.)\b/ },
+      { lang: "typescript", regex: /\b(interface|type|namespace|readonly|private|protected|public|implements|any|as|keyof|unknown)\b/ },
+      { lang: "java", regex: /;\s*$/m },
+      { lang: "java", regex: /\{\s*$/m },
+      { lang: "java", regex: /\b(public|private|protected|static|final|class|interface|package|import|new|void|extends|implements|throws|System\.out\.println)\b/ },
+      { lang: "kotlin", regex: /\b(fun|val|var|when|println|data class|companion object|sealed class|lateinit)\b/ },
+      { lang: "bash", regex: /^(#!|\s*(echo|sudo|grep|awk|sed|export|ls|cd|mkdir|rm|cp|mv|chmod|chown)\s+)/m },
+      { lang: "html", regex: /<\s*(html|head|body|div|span|p|a|script|style|link|meta|!DOCTYPE)\b/i },
+      { lang: "css", regex: /^\s*([.#]\w+|[\w-]+)\s*\{|^\s*@\w+|:\s*[\w-]+;/m },
+      { lang: "sql", regex: /\b(SELECT|FROM|WHERE|INSERT INTO|UPDATE|DELETE|CREATE TABLE|ALTER TABLE|JOIN|GROUP BY|ORDER BY)\b/i },
+      { lang: "dart", regex: /\b(void main\(|Widget build\(|final|Future<\w+>|await|class \w+ extends|@override|setState\(|Scaffold)\b/ }
+    ];
+    const scores = {};
+    for (const p of patterns) {
+      const matches = text.match(new RegExp(p.regex, "gi"));
+      scores[p.lang] = (scores[p.lang] || 0) + (matches ? matches.length : 0);
+    }
+    const hasSemicolons = /;\s*$/m.test(text);
+    const hasBraces = /\{\s*$/m.test(text);
+    if ((hasSemicolons || hasBraces) && scores["python"] > 0) {
+      scores["python"] = Math.max(0, scores["python"] - 5);
+    }
+    if (scores["typescript"] > 0) {
+      scores["typescript"] += scores["javascript"];
+    }
+    let bestLang = null;
+    let maxScore = 0;
+    for (const lang in scores) {
+      if (scores[lang] > maxScore) {
+        maxScore = scores[lang];
+        bestLang = lang;
+      }
+    }
+    return maxScore >= 1 ? bestLang : null;
   }
   injectCreateButtons() {
     if (!this.settings.showQuickCreateButton && !this.settings.showQuickCreateFolderButton)
@@ -568,6 +641,10 @@ var ToolkitSettingTab = class extends import_obsidian2.PluginSettingTab {
       this.plugin.settings.scaleMermaid = value;
       yield this.plugin.saveSettings();
       this.plugin.refreshMermaidScaling();
+    })));
+    new import_obsidian2.Setting(containerEl).setName(t("AUTO_DETECT_LANG_NAME")).setDesc(t("AUTO_DETECT_LANG_DESC")).addToggle((toggle) => toggle.setValue(this.plugin.settings.autoDetectLanguage).onChange((value) => __async(this, null, function* () {
+      this.plugin.settings.autoDetectLanguage = value;
+      yield this.plugin.saveSettings();
     })));
     new import_obsidian2.Setting(containerEl).setName(t("MERMAID_SENSITIVITY_NAME")).setDesc(t("MERMAID_SENSITIVITY_DESC")).addSlider((slider) => slider.setLimits(0.1, 2, 0.1).setValue(this.plugin.settings.mermaidZoomSensitivity).setDynamicTooltip().onChange((value) => __async(this, null, function* () {
       this.plugin.settings.mermaidZoomSensitivity = value;

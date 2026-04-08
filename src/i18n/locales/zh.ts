@@ -14,6 +14,8 @@ export default {
     AUTO_OPEN_WOLAI_DESC: '点击仅包含一个同名 MD 文件的文件夹时，自动打开该文件。',
     QUICK_CREATE_NOTE_NAME: '显示快速新建笔记按钮',
     QUICK_CREATE_NOTE_DESC: '在文件夹旁显示 "+" 图标，以便快速创建新笔记。',
+    AUTO_DETECT_LANG_NAME: '自动识别代码语言',
+    AUTO_DETECT_LANG_DESC: '向空白代码块粘贴代码时，自动识别并填充语言标识符。',
 
     // Commands & Ribbon
     COMMAND_TOGGLE_DRAG: '切换文件资源管理器拖拽锁定状态',

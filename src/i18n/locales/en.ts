@@ -14,6 +14,8 @@ export default {
     AUTO_OPEN_WOLAI_DESC: 'When clicking a folder containing only one MD file with the same name, open the file automatically.',
     QUICK_CREATE_NOTE_NAME: 'Show Quick Create Button',
     QUICK_CREATE_NOTE_DESC: "Show a '+' icon on folders to quickly create a new note.",
+    AUTO_DETECT_LANG_NAME: 'Auto-detect Code Language',
+    AUTO_DETECT_LANG_DESC: 'Automatically detect and fill language tags when pasting code into a blank code block.',
 
     // Commands & Ribbon
     COMMAND_TOGGLE_DRAG: 'Toggle File Explorer Drag-and-Drop Lock',

@@ -19,6 +19,7 @@ interface ToolkitPluginSettings {
 	showQuickCreateButton: boolean;
 	showQuickCreateFolderButton: boolean;
 	lockDragAndDrop: boolean;
+	autoDetectLanguage: boolean;
 	scaleMermaid: boolean;
 	mermaidZoomSensitivity: number;
 }
@@ -29,6 +30,7 @@ const DEFAULT_SETTINGS: ToolkitPluginSettings = {
 	showQuickCreateButton: true,
 	showQuickCreateFolderButton: true,
 	lockDragAndDrop: false,
+	autoDetectLanguage: true,
 	scaleMermaid: true,
 	mermaidZoomSensitivity: 1.0
 }
@@ -129,6 +131,94 @@ export default class ToolkitPlugin extends Plugin {
 		// Periodically check and inject Mermaid zoom controls
 		this.registerInterval(window.setInterval(() => this.injectMermaidZoomControls(), 1000));
 
+		// Register Paste Event for Auto Language Detection
+		this.registerEvent(
+			(this.app.workspace as any).on('editor-paste', (evt: ClipboardEvent, editor: Editor, view: MarkdownView) => {
+				if (!this.settings.autoDetectLanguage) return;
+
+				const clipboardData = evt.clipboardData?.getData('text/plain');
+				if (!clipboardData || clipboardData.length < 5) return;
+
+				const cursor = editor.getCursor();
+				const lineContent = editor.getLine(cursor.line);
+
+				// Case 1: Cursor is exactly after ``` on the same line
+				if (lineContent.trim() === '```') {
+					const lang = this.detectLanguage(clipboardData);
+					if (lang) {
+						editor.setLine(cursor.line, '```' + lang);
+					}
+					return;
+				}
+
+				// Case 2: Cursor is on the line below ```
+				if (cursor.line > 0) {
+					const prevLine = editor.getLine(cursor.line - 1);
+					if (prevLine.trim() === '```') {
+						const lang = this.detectLanguage(clipboardData);
+						if (lang) {
+							editor.setLine(cursor.line - 1, '```' + lang);
+						}
+					}
+				}
+			})
+		);
+	}
+
+	private detectLanguage(text: string): string | null {
+		const patterns = [
+			{ lang: 'python', regex: /\b(def|class|if|elif|else|for|while|try|except|with|finally)\b.*:\s*$/m }, // Keyword + colon
+			{ lang: 'python', regex: /\bself\.\w+/ }, // self.method or self.attr
+			{ lang: 'python', regex: /^\s*#\s+/m }, // # comment at start of line
+			{ lang: 'python', regex: /("""|''')[\s\S]*?\1/ }, // docstrings
+			{ lang: 'python', regex: /^\s*(import|from)\b/m }, // module import
+			
+			{ lang: 'javascript', regex: /\b(const|let|var|function|async|await|console\.log|import|export|=>|process\.)\b/ },
+			{ lang: 'typescript', regex: /\b(interface|type|namespace|readonly|private|protected|public|implements|any|as|keyof|unknown)\b/ },
+			
+			{ lang: 'java', regex: /;\s*$/m }, // semicolon at end of line (strong Java/C indicator)
+			{ lang: 'java', regex: /\{\s*$/m }, // opening brace at end of line
+			{ lang: 'java', regex: /\b(public|private|protected|static|final|class|interface|package|import|new|void|extends|implements|throws|System\.out\.println)\b/ },
+			
+			{ lang: 'kotlin', regex: /\b(fun|val|var|when|println|data class|companion object|sealed class|lateinit)\b/ },
+			{ lang: 'bash', regex: /^(#!|\s*(echo|sudo|grep|awk|sed|export|ls|cd|mkdir|rm|cp|mv|chmod|chown)\s+)/m },
+			{ lang: 'html', regex: /<\s*(html|head|body|div|span|p|a|script|style|link|meta|!DOCTYPE)\b/i },
+			{ lang: 'css', regex: /^\s*([.#]\w+|[\w-]+)\s*\{|^\s*@\w+|:\s*[\w-]+;/m },
+			{ lang: 'sql', regex: /\b(SELECT|FROM|WHERE|INSERT INTO|UPDATE|DELETE|CREATE TABLE|ALTER TABLE|JOIN|GROUP BY|ORDER BY)\b/i },
+			{ lang: 'dart', regex: /\b(void main\(|Widget build\(|final|Future<\w+>|await|class \w+ extends|@override|setState\(|Scaffold)\b/ },
+		];
+
+		// Score each language
+		const scores: { [key: string]: number } = {};
+		for (const p of patterns) {
+			const matches = text.match(new RegExp(p.regex, 'gi'));
+			scores[p.lang] = (scores[p.lang] || 0) + (matches ? matches.length : 0);
+		}
+
+		// Penalize Python if strong Java/C indicators are found
+		const hasSemicolons = /;\s*$/m.test(text);
+		const hasBraces = /\{\s*$/m.test(text);
+		if ((hasSemicolons || hasBraces) && scores['python'] > 0) {
+			scores['python'] = Math.max(0, scores['python'] - 5); // Significant penalty
+		}
+
+		// Specialized refinement for TS vs JS
+		if (scores['typescript'] > 0) {
+			scores['typescript'] += scores['javascript']; 
+		}
+
+		// Get the language with highest score
+		let bestLang = null;
+		let maxScore = 0;
+		for (const lang in scores) {
+			if (scores[lang] > maxScore) {
+				maxScore = scores[lang];
+				bestLang = lang;
+			}
+		}
+
+		// Threshold to avoid false positives for short snippets
+		return maxScore >= 1 ? bestLang : null;
 	}
 
 	injectCreateButtons() {
@@ -593,6 +683,16 @@ class ToolkitSettingTab extends PluginSettingTab {
 					this.plugin.settings.scaleMermaid = value;
 					await this.plugin.saveSettings();
 					this.plugin.refreshMermaidScaling();
+				}));
+
+		new Setting(containerEl)
+			.setName(t('AUTO_DETECT_LANG_NAME'))
+			.setDesc(t('AUTO_DETECT_LANG_DESC'))
+			.addToggle(toggle => toggle
+				.setValue(this.plugin.settings.autoDetectLanguage)
+				.onChange(async (value) => {
+					this.plugin.settings.autoDetectLanguage = value;
+					await this.plugin.saveSettings();
 				}));
 
 		new Setting(containerEl)
