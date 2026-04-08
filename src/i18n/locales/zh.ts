@@ -16,6 +16,8 @@ export default {
     QUICK_CREATE_NOTE_DESC: '在文件夹旁显示 "+" 图标，以便快速创建新笔记。',
     AUTO_DETECT_LANG_NAME: '自动识别代码语言',
     AUTO_DETECT_LANG_DESC: '向空白代码块粘贴代码时，自动识别并填充语言标识符。',
+    AUTO_FOCUS_BLOCK_NAME: '自动定位光标至代码块内',
+    AUTO_FOCUS_BLOCK_DESC: '当插入空白代码块结构时，自动将光标移动到代码块内部。',
 
     // Commands & Ribbon
     COMMAND_TOGGLE_DRAG: '切换文件资源管理器拖拽锁定状态',

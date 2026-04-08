@@ -16,6 +16,8 @@ export default {
     QUICK_CREATE_NOTE_DESC: "Show a '+' icon on folders to quickly create a new note.",
     AUTO_DETECT_LANG_NAME: 'Auto-detect Code Language',
     AUTO_DETECT_LANG_DESC: 'Automatically detect and fill language tags when pasting code into a blank code block.',
+    AUTO_FOCUS_BLOCK_NAME: 'Auto-focus in Code Blocks',
+    AUTO_FOCUS_BLOCK_DESC: 'Automatically move the cursor inside the code block when a new empty block structure is detected.',
 
     // Commands & Ribbon
     COMMAND_TOGGLE_DRAG: 'Toggle File Explorer Drag-and-Drop Lock',

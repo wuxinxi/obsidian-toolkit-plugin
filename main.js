@@ -74,6 +74,8 @@ var en_default = {
   QUICK_CREATE_NOTE_DESC: "Show a '+' icon on folders to quickly create a new note.",
   AUTO_DETECT_LANG_NAME: "Auto-detect Code Language",
   AUTO_DETECT_LANG_DESC: "Automatically detect and fill language tags when pasting code into a blank code block.",
+  AUTO_FOCUS_BLOCK_NAME: "Auto-focus in Code Blocks",
+  AUTO_FOCUS_BLOCK_DESC: "Automatically move the cursor inside the code block when a new empty block structure is detected.",
   COMMAND_TOGGLE_DRAG: "Toggle File Explorer Drag-and-Drop Lock",
   COMMAND_TOGGLE_IMAGES: "Toggle Image Folder Visibility",
   RIBBON_TOGGLE_IMAGES: "Toggle Image Folders",
@@ -110,6 +112,8 @@ var zh_default = {
   QUICK_CREATE_NOTE_DESC: '\u5728\u6587\u4EF6\u5939\u65C1\u663E\u793A "+" \u56FE\u6807\uFF0C\u4EE5\u4FBF\u5FEB\u901F\u521B\u5EFA\u65B0\u7B14\u8BB0\u3002',
   AUTO_DETECT_LANG_NAME: "\u81EA\u52A8\u8BC6\u522B\u4EE3\u7801\u8BED\u8A00",
   AUTO_DETECT_LANG_DESC: "\u5411\u7A7A\u767D\u4EE3\u7801\u5757\u7C98\u8D34\u4EE3\u7801\u65F6\uFF0C\u81EA\u52A8\u8BC6\u522B\u5E76\u586B\u5145\u8BED\u8A00\u6807\u8BC6\u7B26\u3002",
+  AUTO_FOCUS_BLOCK_NAME: "\u81EA\u52A8\u5B9A\u4F4D\u5149\u6807\u81F3\u4EE3\u7801\u5757\u5185",
+  AUTO_FOCUS_BLOCK_DESC: "\u5F53\u63D2\u5165\u7A7A\u767D\u4EE3\u7801\u5757\u7ED3\u6784\u65F6\uFF0C\u81EA\u52A8\u5C06\u5149\u6807\u79FB\u52A8\u5230\u4EE3\u7801\u5757\u5185\u90E8\u3002",
   COMMAND_TOGGLE_DRAG: "\u5207\u6362\u6587\u4EF6\u8D44\u6E90\u7BA1\u7406\u5668\u62D6\u62FD\u9501\u5B9A\u72B6\u6001",
   COMMAND_TOGGLE_IMAGES: "\u5207\u6362\u56FE\u7247\u6587\u4EF6\u5939\u663E\u793A\u72B6\u6001",
   RIBBON_TOGGLE_IMAGES: "\u5207\u6362\u56FE\u7247\u6587\u4EF6\u5939\u663E\u793A",
@@ -150,6 +154,7 @@ var DEFAULT_SETTINGS = {
   showQuickCreateFolderButton: true,
   lockDragAndDrop: false,
   autoDetectLanguage: true,
+  autoFocusCodeBlock: true,
   scaleMermaid: true,
   mermaidZoomSensitivity: 1
 };
@@ -243,6 +248,26 @@ var ToolkitPlugin = class extends import_obsidian2.Plugin {
             }
           }
         }
+      }));
+      this.registerEvent(this.app.workspace.on("editor-change", (editor) => {
+        if (!this.settings.autoFocusCodeBlock)
+          return;
+        setTimeout(() => {
+          const cursor = editor.getCursor();
+          const lineCount = editor.lineCount();
+          if (cursor.line >= lineCount)
+            return;
+          const lineContent = editor.getLine(cursor.line);
+          if (lineContent.startsWith("```")) {
+            if (cursor.line + 2 < lineCount) {
+              const nextLine = editor.getLine(cursor.line + 1);
+              const afterNextLine = editor.getLine(cursor.line + 2);
+              if (nextLine.trim() === "" && afterNextLine.trim() === "```") {
+                editor.setCursor({ line: cursor.line + 1, ch: 0 });
+              }
+            }
+          }
+        }, 100);
       }));
     });
   }
@@ -641,6 +666,10 @@ var ToolkitSettingTab = class extends import_obsidian2.PluginSettingTab {
       this.plugin.settings.scaleMermaid = value;
       yield this.plugin.saveSettings();
       this.plugin.refreshMermaidScaling();
+    })));
+    new import_obsidian2.Setting(containerEl).setName(t("AUTO_FOCUS_BLOCK_NAME")).setDesc(t("AUTO_FOCUS_BLOCK_DESC")).addToggle((toggle) => toggle.setValue(this.plugin.settings.autoFocusCodeBlock).onChange((value) => __async(this, null, function* () {
+      this.plugin.settings.autoFocusCodeBlock = value;
+      yield this.plugin.saveSettings();
     })));
     new import_obsidian2.Setting(containerEl).setName(t("AUTO_DETECT_LANG_NAME")).setDesc(t("AUTO_DETECT_LANG_DESC")).addToggle((toggle) => toggle.setValue(this.plugin.settings.autoDetectLanguage).onChange((value) => __async(this, null, function* () {
       this.plugin.settings.autoDetectLanguage = value;

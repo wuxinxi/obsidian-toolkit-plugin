@@ -20,6 +20,7 @@ interface ToolkitPluginSettings {
 	showQuickCreateFolderButton: boolean;
 	lockDragAndDrop: boolean;
 	autoDetectLanguage: boolean;
+	autoFocusCodeBlock: boolean;
 	scaleMermaid: boolean;
 	mermaidZoomSensitivity: number;
 }
@@ -31,6 +32,7 @@ const DEFAULT_SETTINGS: ToolkitPluginSettings = {
 	showQuickCreateFolderButton: true,
 	lockDragAndDrop: false,
 	autoDetectLanguage: true,
+	autoFocusCodeBlock: true,
 	scaleMermaid: true,
 	mermaidZoomSensitivity: 1.0
 }
@@ -161,6 +163,39 @@ export default class ToolkitPlugin extends Plugin {
 						}
 					}
 				}
+			})
+		);
+
+		// Register Change Event for Smart Cursor Focus
+		this.registerEvent(
+			(this.app.workspace as any).on('editor-change', (editor: Editor) => {
+				if (!this.settings.autoFocusCodeBlock) return;
+
+				// Small delay to ensure third-party snippets are fully inserted
+				setTimeout(() => {
+					const cursor = editor.getCursor();
+					const lineCount = editor.lineCount();
+					
+					// Security check: ensure cursor is still valid
+					if (cursor.line >= lineCount) return;
+					
+					const lineContent = editor.getLine(cursor.line);
+
+					// Trigger if we are on a triple-backtick line (opening tag)
+					if (lineContent.startsWith('```')) {
+						// Check if there's an empty line and a closing backtick immediately following
+						if (cursor.line + 2 < lineCount) {
+							const nextLine = editor.getLine(cursor.line + 1);
+							const afterNextLine = editor.getLine(cursor.line + 2);
+
+							if (nextLine.trim() === '' && afterNextLine.trim() === '```') {
+								// Move cursor to the middle empty line only if it's not already there
+								// (prevent infinite re-adjustment if user manually moved back)
+								editor.setCursor({ line: cursor.line + 1, ch: 0 });
+							}
+						}
+					}
+				}, 100); // 100ms delay for stability
 			})
 		);
 	}
@@ -683,6 +718,16 @@ class ToolkitSettingTab extends PluginSettingTab {
 					this.plugin.settings.scaleMermaid = value;
 					await this.plugin.saveSettings();
 					this.plugin.refreshMermaidScaling();
+				}));
+
+		new Setting(containerEl)
+			.setName(t('AUTO_FOCUS_BLOCK_NAME'))
+			.setDesc(t('AUTO_FOCUS_BLOCK_DESC'))
+			.addToggle(toggle => toggle
+				.setValue(this.plugin.settings.autoFocusCodeBlock)
+				.onChange(async (value) => {
+					this.plugin.settings.autoFocusCodeBlock = value;
+					await this.plugin.saveSettings();
 				}));
 
 		new Setting(containerEl)
